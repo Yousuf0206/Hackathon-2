@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase II Todo App - Integrated Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-info {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .nav-btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            background: white;
+            padding: 0.75rem 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        iframe {
+            flex: 1;
+            border: none;
+            width: 100%;
+            background: white;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: #1f2937;
+            color: white;
+            padding: 1.5rem;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar h2 {
+            font-size: 1.125rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #374151;
+        }
+
+        .info-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .info-section h3 {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #374151;
+            font-size: 0.875rem;
+        }
+
+        .info-label {
+            color: #9ca3af;
+        }
+
+        .info-value {
+            color: #e5e7eb;
+            font-weight: 500;
+        }
+
+        .info-value a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .feature-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.875rem;
+            color: #d1d5db;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .quick-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .quick-link {
+            padding: 0.75rem;
+            background: #374151;
+            border-radius: 6px;
+            text-decoration: none;
+            color: white;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-link:hover {
+            background: #4b5563;
+        }
+
+        .quick-link-icon {
+            font-size: 1.25rem;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                display: none;
+            }
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 1.125rem;
+            color: #6b7280;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Phase II Todo App - Integrated Dashboard</h1>
+        <div class="header-info">
+            <div class="status">
+                <span class="status-dot"></span>
+                <span>Services Running</span>
+            </div>
+            <div class="nav-buttons">
+                <button class="nav-btn active" onclick="showTab('app')">Application</button>
+                <button class="nav-btn" onclick="showTab('api')">API Docs</button>
+                <a class="nav-btn" href="http://localhost:8000" target="_blank">Backend</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="tabs">
+                <button class="tab-btn active" data-view="app">Frontend App</button>
+                <button class="tab-btn" data-view="api">API Documentation</button>
+                <button class="tab-btn" data-view="health">Health Check</button>
+            </div>
+
+            <iframe id="app-frame" src="http://localhost:3000" title="Frontend Application"></iframe>
+            <iframe id="api-frame" src="http://localhost:8000/docs" title="API Documentation" class="hidden"></iframe>
+            <iframe id="health-frame" src="http://localhost:8000/health" title="Health Check" class="hidden"></iframe>
+        </div>
+
+        <div class="sidebar">
+            <h2>📊 System Information</h2>
+
+            <div class="info-section">
+                <h3>Servers</h3>
+                <div class="info-item">
+                    <span class="info-label">Frontend</span>
+                    <span class="info-value"><a href="http://localhost:3000" target="_blank">localhost:3000</a></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Backend</span>
+                    <span class="info-value"><a href="http://localhost:8000" target="_blank">localhost:8000</a></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">API Docs</span>
+                    <span class="info-value"><a href="http://localhost:8000/docs" target="_blank">/docs</a></span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>Technology Stack</h3>
+                <div class="info-item">
+                    <span class="info-label">Frontend</span>
+                    <span class="info-value">Next.js 15</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Backend</span>
+                    <span class="info-value">FastAPI</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Database</span>
+                    <span class="info-value">SQLite</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Auth</span>
+                    <span class="info-value">JWT</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>Features</h3>
+                <ul class="feature-list">
+                    <li>User Registration & Login</li>
+                    <li>Create & View Todos</li>
+                    <li>Edit Todo Details</li>
+                    <li>Toggle Completion</li>
+                    <li>Delete Todos</li>
+                    <li>User Data Isolation</li>
+                    <li>JWT Authentication</li>
+                    <li>Password Hashing</li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <h3>Quick Links</h3>
+                <div class="quick-links">
+                    <a href="http://localhost:3000/register" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">👤</span>
+                        <span>Register New Account</span>
+                    </a>
+                    <a href="http://localhost:3000/login" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">🔐</span>
+                        <span>Login</span>
+                    </a>
+                    <a href="http://localhost:3000/todos" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">📝</span>
+                        <span>Todo Dashboard</span>
+                    </a>
+                    <a href="http://localhost:8000/docs" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">📚</span>
+                        <span>API Documentation</span>
+                    </a>
+                    <a href="http://localhost:8000/health" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">❤️</span>
+                        <span>Health Check</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>Test Credentials</h3>
+                <div class="info-item">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">test@example.com</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Password</span>
+                    <span class="info-value">password123</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const frames = {
+            app: document.getElementById('app-frame'),
+            api: document.getElementById('api-frame'),
+            health: document.getElementById('health-frame')
+        };
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const view = btn.getAttribute('data-view');
+
+                // Update tab buttons
+                tabButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update frames
+                Object.keys(frames).forEach(key => {
+                    frames[key].classList.add('hidden');
+                });
+                frames[view].classList.remove('hidden');
+            });
+        });
+
+        function showTab(tab) {
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'app') {
+                tabButtons[0].click();
+            } else if (tab === 'api') {
+                tabButtons[1].click();
+            }
+        }
+
+        // Check if servers are running
+        async function checkServers() {
+            try {
+                const backendResponse = await fetch('http://localhost:8000/health');
+                const frontendResponse = await fetch('http://localhost:3000');
+
+                if (!backendResponse.ok || !frontendResponse.ok) {
+                    console.warn('One or more servers not responding');
+                }
+            } catch (error) {
+                console.error('Error checking servers:', error);
+                alert('Warning: Make sure both backend (port 8000) and frontend (port 3000) servers are running!');
+            }
+        }
+
+        // Check servers on load
+        setTimeout(checkServers, 2000);
+
+        // Refresh check every 30 seconds
+        setInterval(checkServers, 30000);
+    </script>
+</body>
+</html>

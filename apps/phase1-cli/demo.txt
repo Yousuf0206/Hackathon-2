@@ -1,0 +1,85 @@
+# Demo Script - Todo Application
+# Copy and paste these commands one at a time to see the app in action
+
+# 1. Show available commands
+help
+
+# 2. Add your first task
+add
+Buy groceries
+Milk, eggs, bread, coffee
+
+# 3. Add more tasks
+add
+Write project report
+Q4 financial summary with charts
+
+add
+Call dentist
+Schedule cleaning appointment
+
+add
+Review pull requests
+Check team's code submissions
+
+# 4. View all tasks
+list
+
+# 5. Mark first task as complete
+complete
+1
+
+# 6. View updated list
+list
+
+# 7. Update a task
+update
+2
+Write Q4 financial report
+Include revenue, expenses, and growth projections
+
+# 8. View updated task
+list
+
+# 9. Mark another task complete
+complete
+3
+
+# 10. View progress
+list
+
+# 11. Mark a task as incomplete (undo)
+incomplete
+1
+
+# 12. View after undo
+list
+
+# 13. Delete a task
+delete
+4
+
+# 14. Final list view
+list
+
+# 15. Try invalid command (error handling demo)
+invalid
+
+# 16. Try invalid ID (error handling demo)
+complete
+999
+
+# 17. Try empty title (validation demo)
+add
+
+
+# 18. Add one more task correctly
+add
+Final task
+This is the last task
+
+# 19. Final list
+list
+
+# 20. Exit application
+exit
