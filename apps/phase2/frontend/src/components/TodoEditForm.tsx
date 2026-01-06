@@ -5,8 +5,8 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { Todo } from '@/lib/types';
-import { api, ApiError } from '@/lib/api';
+import { Todo } from '@/library/types';
+import { api, ApiError } from '@/library/api';
 
 interface TodoEditFormProps {
   todo: Todo;

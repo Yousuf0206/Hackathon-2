@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd apps/phase2/frontend && npm run build",
+  "outputDirectory": "apps/phase2/frontend/.next",
+  "installCommand": "cd apps/phase2/frontend && npm install",
+  "framework": "nextjs",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ."
+}

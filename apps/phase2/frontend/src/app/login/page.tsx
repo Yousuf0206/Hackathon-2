@@ -7,9 +7,9 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import { setSession } from '@/lib/auth';
-import { ApiError } from '@/lib/api';
+import { api } from '@/library/api';
+import { setSession } from '@/library/auth';
+import { ApiError } from '@/library/api';
 
 export default function LoginPage() {
   const router = useRouter();

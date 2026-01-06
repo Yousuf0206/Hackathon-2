@@ -5,7 +5,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { clearSession, getSession } from '@/lib/auth';
+import { clearSession, getSession } from '@/library/auth';
 
 export default function Navbar() {
   const router = useRouter();

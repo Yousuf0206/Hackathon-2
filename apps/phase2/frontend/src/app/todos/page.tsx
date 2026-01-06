@@ -6,9 +6,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, ApiError } from '@/lib/api';
-import { Todo, TodoListResponse } from '@/lib/types';
-import { isAuthenticated } from '@/lib/auth';
+import { api, ApiError } from '@/library/api';
+import { Todo, TodoListResponse } from '@/library/types';
+import { isAuthenticated } from '@/library/auth';
 import { TodoForm } from '@/components/TodoForm';
 import { TodoList } from '@/components/TodoList';
 import { Navbar } from '@/components/Navbar';

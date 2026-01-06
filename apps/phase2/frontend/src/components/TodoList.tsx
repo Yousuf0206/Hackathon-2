@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { Todo } from '@/lib/types';
+import { Todo } from '@/library/types';
 import { TodoItem } from './TodoItem';
 
 interface TodoListProps {
