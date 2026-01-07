@@ -11,6 +11,8 @@ import { api } from '@/library/api';
 import { setSession } from '@/library/auth';
 import { ApiError } from '@/library/api';
 
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();

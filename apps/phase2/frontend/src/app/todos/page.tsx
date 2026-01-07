@@ -13,6 +13,8 @@ import { TodoForm }  from '@/components/TodoForm';
 import { TodoList } from '@/components/TodoList';
 import Navbar from '@/components/Navbar';
 
+export const dynamic = 'force-dynamic';
+
 export default function TodosPage() {
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
