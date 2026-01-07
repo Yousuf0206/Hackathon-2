@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/library/api';
@@ -13,7 +13,7 @@ import { ApiError } from '@/library/api';
 
 export const dynamic = 'force-dynamic';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -516,5 +516,21 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="page-wrapper">
+        <div className="login-container">
+          <div className="login-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '3rem' }}>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
