@@ -1,36 +1,40 @@
 @echo off
-echo ========================================
-echo Phase II Todo App - Starting Services
-echo ========================================
+REM TaskFlow - Start both Backend and Frontend servers
+REM This script runs both servers in a single terminal
+
+echo ============================================
+echo   TaskFlow - Fullstack Todo Application
+echo ============================================
+echo.
+echo Starting servers...
+echo   Backend:  http://localhost:8000
+echo   Frontend: http://localhost:3000
+echo.
+echo Press Ctrl+C to stop both servers
+echo ============================================
 echo.
 
-echo Starting Backend Server (FastAPI)...
-start "Backend Server" cmd /k "cd backend && venv312\Scripts\python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+REM Start backend in background
+cd /d "%~dp0backend"
+start "Backend - FastAPI" cmd /c "python -m uvicorn src.main:app --reload --port 8000"
 
-echo Waiting for backend to start...
+REM Wait a moment for backend to start
 timeout /t 3 /nobreak >nul
 
-echo Starting Frontend Server (Next.js)...
-start "Frontend Server" cmd /k "cd frontend && npm run dev"
+REM Start frontend
+cd /d "%~dp0frontend"
+start "Frontend - Next.js" cmd /c "npm run dev"
 
+echo Both servers are starting...
 echo.
-echo ========================================
-echo Services Starting...
-echo ========================================
-echo Backend:  http://localhost:8000
-echo Frontend: http://localhost:3000
-echo API Docs: http://localhost:8000/docs
-echo ========================================
+echo ============================================
+echo   Servers are running!
+echo   - Backend API:  http://localhost:8000
+echo   - Frontend App: http://localhost:3000
+echo ============================================
 echo.
-echo Opening browser in 10 seconds...
-timeout /t 10 /nobreak >nul
+echo This window will stay open. Close it to stop all servers.
+echo.
 
-echo Opening application in browser...
-start http://localhost:3000
-
-echo.
-echo ========================================
-echo Both servers are running!
-echo Press Ctrl+C in each window to stop
-echo ========================================
-pause
+REM Keep this window open
+pause >nul

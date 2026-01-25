@@ -3,7 +3,8 @@
  * T020: API client with JWT from localStorage, error handling, 401 redirect.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use local API routes (same origin) - no external backend needed
+const API_URL = '';
 
 export class ApiError extends Error {
   constructor(

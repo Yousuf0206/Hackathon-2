@@ -2,10 +2,12 @@
 User model.
 T011: User model with id, email, password_hash, created_at, updated_at.
 """
-from sqlmodel import SQLModel, Field, Column, String
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column
 from typing import Optional
 from datetime import datetime
 from uuid import UUID, uuid4
+import sqlalchemy.sql.sqltypes as sqltypes
 
 
 class User(SQLModel, table=True):
@@ -20,17 +22,11 @@ class User(SQLModel, table=True):
     """
     __tablename__ = "users"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        nullable=False
-    )
-    email: str = Field(
-        sa_column=Column(String(255), unique=True, index=True, nullable=False)
-    )
-    password_hash: str = Field(nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    email: str = Field(sa_column=Column(sqltypes.String(255), unique=True, index=True))
+    password_hash: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         json_schema_extra = {

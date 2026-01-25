@@ -4,7 +4,7 @@ T017: get_current_user dependency to extract user_id from JWT sub claim.
 """
 from fastapi import Depends, HTTPException, status, Header
 from typing import Annotated, Optional
-from .auth.jwt import extract_user_id
+from auth.jwt import extract_user_id
 
 
 async def get_current_user(

@@ -2,11 +2,12 @@
 Todo model.
 T012: Todo model with id, user_id, title, description, completed, created_at, updated_at.
 """
-from sqlmodel import SQLModel, Field, Column, String, Text
-from sqlalchemy import ForeignKey
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, ForeignKey
 from typing import Optional
 from datetime import datetime
 from uuid import UUID, uuid4
+import sqlalchemy.sql.sqltypes as sqltypes
 
 
 class Todo(SQLModel, table=True):
@@ -26,32 +27,19 @@ class Todo(SQLModel, table=True):
     """
     __tablename__ = "todos"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        nullable=False
-    )
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(
         sa_column=Column(
             "user_id",
             ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False,
             index=True
         )
     )
-    title: str = Field(
-        sa_column=Column(String(500), nullable=False),
-        min_length=1,
-        max_length=500
-    )
-    description: Optional[str] = Field(
-        default=None,
-        sa_column=Column(Text, nullable=True),
-        max_length=5000
-    )
-    completed: bool = Field(default=False, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    title: str = Field(min_length=1, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=5000)
+    completed: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         json_schema_extra = {

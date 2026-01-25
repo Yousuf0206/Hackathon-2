@@ -11,10 +11,10 @@ from sqlmodel import Session, select
 from uuid import UUID
 import re
 
-from ..database import get_session
-from ..models.user import User
-from ..auth.password import hash_password, verify_password
-from ..auth.jwt import create_access_token
+from database import get_session
+from models.user import User
+from auth.password import hash_password, verify_password
+from auth.jwt import create_access_token
 
 
 router = APIRouter()

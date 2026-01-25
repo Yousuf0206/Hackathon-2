@@ -5,29 +5,51 @@ T018: FastAPI app with CORS, database connection validation, health check.
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from .config import settings
-from .database import engine
+from config import settings
+from database import engine, init_db
 from sqlmodel import text
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    Validates database connection on startup.
+    Initializes database and validates connection on startup.
     """
-    # Startup: Validate database connection
+    logger.info("🚀 Starting Phase II Todo API...")
+
+    # Startup: Initialize database tables
+    try:
+        init_db()
+        logger.info("✅ Database tables initialized")
+    except Exception as e:
+        logger.error(f"❌ Database initialization failed: {e}")
+        raise
+
+    # Validate database connection
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        print("Database connection validated successfully")
+        logger.info("✅ Database connection validated successfully")
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        logger.error(f"❌ Database connection failed: {e}")
         raise
+
+    logger.info(f"✅ Backend ready on http://0.0.0.0:8000")
+    logger.info(f"📝 API documentation: http://0.0.0.0:8000/docs")
 
     yield
 
     # Shutdown: Clean up if needed
+    logger.info("🛑 Shutting down backend...")
     engine.dispose()
 
 
@@ -64,9 +86,9 @@ async def health_check():
 
 # Import and mount routers
 # T027: Mount auth router
-from .api import auth
+from api import auth
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 # T034: Mount todos router
-from .api import todos
+from api import todos
 app.include_router(todos.router, prefix="/api/todos", tags=["todos"])
