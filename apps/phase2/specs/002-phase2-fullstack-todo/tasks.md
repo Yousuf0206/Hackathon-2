@@ -2,6 +2,7 @@
 
 **Input**: Design documents from `/specs/002-phase2-fullstack-todo/`
 **Prerequisites**: plan.md, spec.md, contracts/ (8 API contracts)
+**Status**: IMPLEMENTATION COMPLETE ✅
 
 **Tests**: Not requested in spec - NO test tasks included
 
@@ -24,14 +25,14 @@
 
 **Purpose**: Project initialization and monorepo structure
 
-- [ ] T001 [P] Create backend directory structure at `backend/` with subdirectories: `src/`, `src/models/`, `src/auth/`, `src/api/`, `migrations/`
-- [ ] T002 [P] Create frontend directory structure at `frontend/` with subdirectories: `src/`, `src/app/`, `src/components/`, `src/lib/`
-- [ ] T003 Initialize Python project with pyproject.toml and requirements.txt at `backend/requirements.txt` (FastAPI, SQLModel, python-jose, passlib, psycopg2-binary, uvicorn, alembic)
-- [ ] T004 Initialize Next.js project with package.json at `frontend/package.json` (Next.js 16+, Better Auth, React 18+, TypeScript 5+)
-- [ ] T005 [P] Create backend .env.example at `backend/.env.example` with DATABASE_URL and BETTER_AUTH_SECRET placeholders
-- [ ] T006 [P] Create frontend .env.example at `frontend/.env.example` with NEXT_PUBLIC_API_URL and BETTER_AUTH_SECRET placeholders
-- [ ] T007 [P] Create backend CLAUDE.md at `backend/CLAUDE.md` with FastAPI, SQLModel, JWT verification guidance
-- [ ] T008 [P] Create frontend CLAUDE.md at `frontend/CLAUDE.md` with Next.js App Router, Better Auth, centralized API client guidance
+- [x] T001 [P] Create backend directory structure at `backend/` with subdirectories: `src/`, `src/models/`, `src/auth/`, `src/api/`, `migrations/`
+- [x] T002 [P] Create frontend directory structure at `frontend/` with subdirectories: `src/`, `src/app/`, `src/components/`, `src/lib/`
+- [x] T003 Initialize Python project with pyproject.toml and requirements.txt at `backend/requirements.txt` (FastAPI, SQLModel, python-jose, passlib, psycopg2-binary, uvicorn, alembic)
+- [x] T004 Initialize Next.js project with package.json at `frontend/package.json` (Next.js 16+, Better Auth, React 18+, TypeScript 5+)
+- [x] T005 [P] Create backend .env.example at `backend/.env.example` with DATABASE_URL and BETTER_AUTH_SECRET placeholders
+- [x] T006 [P] Create frontend .env.example at `frontend/.env.example` with NEXT_PUBLIC_API_URL and BETTER_AUTH_SECRET placeholders
+- [x] T007 [P] Create backend CLAUDE.md at `backend/CLAUDE.md` with FastAPI, SQLModel, JWT verification guidance
+- [x] T008 [P] Create frontend CLAUDE.md at `frontend/CLAUDE.md` with Next.js App Router, Better Auth, centralized API client guidance
 
 ---
 
@@ -43,25 +44,25 @@
 
 ### Backend Foundation
 
-- [ ] T009 Create config module at `backend/src/config.py` to load DATABASE_URL and BETTER_AUTH_SECRET from environment variables
-- [ ] T010 Create database engine and session factory at `backend/src/database.py` using SQLModel.create_engine with PostgreSQL connection
-- [ ] T011 [P] Create User model at `backend/src/models/user.py` with fields: id (UUID), email (unique, indexed), password_hash, created_at, updated_at
-- [ ] T012 [P] Create Todo model at `backend/src/models/todo.py` with fields: id (UUID), user_id (FK to User, indexed, ON DELETE CASCADE), title (max 500 chars), description (max 5000 chars), completed (default false), created_at, updated_at
-- [ ] T013 Initialize Alembic migrations at `backend/migrations/` and create initial migration for User and Todo tables
-- [ ] T014 Create password hashing utilities at `backend/src/auth/password.py` using passlib with bcrypt (hash_password, verify_password functions)
-- [ ] T015 Create JWT utilities at `backend/src/auth/jwt.py` for token creation (create_access_token with sub claim, 24h expiry, HS256 algorithm) and verification (verify_token, extract_user_id)
-- [ ] T016 Create JWT authentication middleware at `backend/src/auth/middleware.py` to extract and verify JWT from Authorization header, return 401 on failure
-- [ ] T017 Create get_current_user dependency at `backend/src/dependencies.py` using FastAPI Depends to extract user_id from JWT sub claim
-- [ ] T018 Create FastAPI app instance at `backend/src/main.py` with CORS middleware, startup database connection validation, and health check endpoint
+- [x] T009 Create config module at `backend/src/config.py` to load DATABASE_URL and BETTER_AUTH_SECRET from environment variables
+- [x] T010 Create database engine and session factory at `backend/src/database.py` using SQLModel.create_engine with PostgreSQL connection
+- [x] T011 [P] Create User model at `backend/src/models/user.py` with fields: id (UUID), email (unique, indexed), password_hash, created_at, updated_at
+- [x] T012 [P] Create Todo model at `backend/src/models/todo.py` with fields: id (UUID), user_id (FK to User, indexed, ON DELETE CASCADE), title (max 500 chars), description (max 5000 chars), completed (default false), created_at, updated_at
+- [x] T013 Initialize Alembic migrations at `backend/migrations/` and create initial migration for User and Todo tables
+- [x] T014 Create password hashing utilities at `backend/src/auth/password.py` using passlib with bcrypt (hash_password, verify_password functions)
+- [x] T015 Create JWT utilities at `backend/src/auth/jwt.py` for token creation (create_access_token with sub claim, 24h expiry, HS256 algorithm) and verification (verify_token, extract_user_id)
+- [x] T016 Create JWT authentication middleware at `backend/src/auth/middleware.py` to extract and verify JWT from Authorization header, return 401 on failure
+- [x] T017 Create get_current_user dependency at `backend/src/dependencies.py` using FastAPI Depends to extract user_id from JWT sub claim
+- [x] T018 Create FastAPI app instance at `backend/src/main.py` with CORS middleware, startup database connection validation, and health check endpoint
 
 ### Frontend Foundation
 
-- [ ] T019 Configure Better Auth at `frontend/src/lib/auth.ts` with JWT plugin, shared BETTER_AUTH_SECRET, 24h token expiry
-- [ ] T020 Create centralized API client at `frontend/src/lib/api.ts` with automatic JWT attachment from Better Auth session, error handling (401 redirect to /login)
-- [ ] T021 Create TypeScript types at `frontend/src/lib/types.ts` for User (id, email, created_at) and Todo (id, user_id, title, description, completed, created_at, updated_at)
-- [ ] T022 Create Next.js middleware at `frontend/src/middleware.ts` to protect /todos routes (redirect unauthenticated users to /login)
-- [ ] T023 Create root layout at `frontend/src/app/layout.tsx` with Better Auth provider and global styles
-- [ ] T024 Create landing page at `frontend/src/app/page.tsx` with links to /login and /register
+- [x] T019 Configure Better Auth at `frontend/src/lib/auth.ts` with JWT plugin, shared BETTER_AUTH_SECRET, 24h token expiry
+- [x] T020 Create centralized API client at `frontend/src/lib/api.ts` with automatic JWT attachment from Better Auth session, error handling (401 redirect to /login)
+- [x] T021 Create TypeScript types at `frontend/src/lib/types.ts` for User (id, email, created_at) and Todo (id, user_id, title, description, completed, created_at, updated_at)
+- [x] T022 Create Next.js middleware at `frontend/src/middleware.ts` to protect /todos routes (redirect unauthenticated users to /login)
+- [x] T023 Create root layout at `frontend/src/app/layout.tsx` with Better Auth provider and global styles
+- [x] T024 Create landing page at `frontend/src/app/page.tsx` with links to /login and /register
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -75,13 +76,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T025 [P] [US1] Implement POST /api/auth/register endpoint at `backend/src/api/auth.py`: validate email format, check uniqueness (409 if exists), hash password, create user, generate JWT with user_id in sub claim, return 201 with user and token
-- [ ] T026 [P] [US1] Implement POST /api/auth/login endpoint at `backend/src/api/auth.py`: validate credentials, verify password hash, generate JWT with user_id in sub claim, return 200 with user and token (401 on invalid credentials without leaking user existence)
-- [ ] T027 [US1] Mount auth router in `backend/src/main.py` at /api/auth prefix
-- [ ] T028 [P] [US1] Create registration page at `frontend/src/app/register/page.tsx` with form (email, password), client-side validation (email format, password >= 8 chars), handle 409 conflict, store token in Better Auth session on success, redirect to /todos
-- [ ] T029 [P] [US1] Create login page at `frontend/src/app/login/page.tsx` with form (email, password), handle 401 error without revealing user existence, store token in Better Auth session on success, redirect to /todos
-- [ ] T030 [US1] Create Navbar component at `frontend/src/components/Navbar.tsx` with logout button (clears Better Auth session, redirects to /login)
-- [ ] T031 [US1] Add input validation and error handling for auth endpoints: return 400 for missing fields, invalid email format, password < 8 chars
+- [x] T025 [P] [US1] Implement POST /api/auth/register endpoint at `backend/src/api/auth.py`: validate email format, check uniqueness (409 if exists), hash password, create user, generate JWT with user_id in sub claim, return 201 with user and token
+- [x] T026 [P] [US1] Implement POST /api/auth/login endpoint at `backend/src/api/auth.py`: validate credentials, verify password hash, generate JWT with user_id in sub claim, return 200 with user and token (401 on invalid credentials without leaking user existence)
+- [x] T027 [US1] Mount auth router in `backend/src/main.py` at /api/auth prefix
+- [x] T028 [P] [US1] Create registration page at `frontend/src/app/register/page.tsx` with form (email, password), client-side validation (email format, password >= 8 chars), handle 409 conflict, store token in Better Auth session on success, redirect to /todos
+- [x] T029 [P] [US1] Create login page at `frontend/src/app/login/page.tsx` with form (email, password), handle 401 error without revealing user existence, store token in Better Auth session on success, redirect to /todos
+- [x] T030 [US1] Create Navbar component at `frontend/src/components/Navbar.tsx` with logout button (clears Better Auth session, redirects to /login)
+- [x] T031 [US1] Add input validation and error handling for auth endpoints: return 400 for missing fields, invalid email format, password < 8 chars
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can register, login, logout, and access protected routes
 
@@ -95,13 +96,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T032 [P] [US2] Implement POST /api/todos endpoint at `backend/src/api/todos.py`: extract user_id from JWT (get_current_user dependency), validate title (required, trim whitespace, max 500 chars), validate description (optional, max 5000 chars), create todo with user_id from JWT (never from request body), set completed=false, return 201 with created todo
-- [ ] T033 [P] [US2] Implement GET /api/todos endpoint at `backend/src/api/todos.py`: extract user_id from JWT, query todos filtered by user_id (WHERE user_id = <jwt_user_id>), return 200 with list sorted by created_at DESC (newest first)
-- [ ] T034 [US2] Mount todos router in `backend/src/main.py` at /api/todos prefix with JWT authentication middleware
-- [ ] T035 [P] [US2] Create TodoList component at `frontend/src/components/TodoList.tsx` to display list of todos with title, description, created_at timestamp, empty state message ("No todos yet - create your first one!")
-- [ ] T036 [P] [US2] Create TodoForm component at `frontend/src/components/TodoForm.tsx` with title input (required), description textarea (optional), client-side validation (trim title, check non-empty), call POST /api/todos via centralized API client
-- [ ] T037 [US2] Create todos dashboard page at `frontend/src/app/todos/page.tsx`: fetch todos on load via GET /api/todos, render TodoList and TodoForm components, handle 401 redirect to login
-- [ ] T038 [US2] Add error handling for todo creation: 400 for empty title, 401 for expired token (redirect to login), display user-friendly error messages
+- [x] T032 [P] [US2] Implement POST /api/todos endpoint at `backend/src/api/todos.py`: extract user_id from JWT (get_current_user dependency), validate title (required, trim whitespace, max 500 chars), validate description (optional, max 5000 chars), create todo with user_id from JWT (never from request body), set completed=false, return 201 with created todo
+- [x] T033 [P] [US2] Implement GET /api/todos endpoint at `backend/src/api/todos.py`: extract user_id from JWT, query todos filtered by user_id (WHERE user_id = <jwt_user_id>), return 200 with list sorted by created_at DESC (newest first)
+- [x] T034 [US2] Mount todos router in `backend/src/main.py` at /api/todos prefix with JWT authentication middleware
+- [x] T035 [P] [US2] Create TodoList component at `frontend/src/components/TodoList.tsx` to display list of todos with title, description, created_at timestamp, empty state message ("No todos yet - create your first one!")
+- [x] T036 [P] [US2] Create TodoForm component at `frontend/src/components/TodoForm.tsx` with title input (required), description textarea (optional), client-side validation (trim title, check non-empty), call POST /api/todos via centralized API client
+- [x] T037 [US2] Create todos dashboard page at `frontend/src/app/todos/page.tsx`: fetch todos on load via GET /api/todos, render TodoList and TodoForm components, handle 401 redirect to login
+- [x] T038 [US2] Add error handling for todo creation: 400 for empty title, 401 for expired token (redirect to login), display user-friendly error messages
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - users can register/login AND create/view their own todos
 
@@ -115,10 +116,10 @@
 
 ### Implementation for User Story 6 (Integrated into Existing Endpoints)
 
-- [ ] T039 [US6] Implement GET /api/todos/{todo_id} endpoint at `backend/src/api/todos.py`: extract user_id from JWT, query todo with WHERE id = <todo_id> AND user_id = <jwt_user_id>, return 404 (not 403) if not found or unauthorized to prevent enumeration
-- [ ] T040 [US6] Add ownership verification to all todo endpoints: ensure all queries include `WHERE user_id = <jwt_user_id>` filter, never read user_id from URL/query params/request body (only from JWT sub claim), return 404 on ownership violations
-- [ ] T041 [US6] Add security validation in JWT middleware at `backend/src/auth/middleware.py`: verify JWT sub claim exists, verify JWT signature with BETTER_AUTH_SECRET, verify expiration (<24h), return 401 for missing/invalid/expired tokens
-- [ ] T042 [US6] Document user isolation enforcement in `backend/CLAUDE.md`: emphasize user_id MUST come exclusively from JWT sub claim, all todo queries MUST include user_id filter, 404 (not 403) on ownership violations
+- [x] T039 [US6] Implement GET /api/todos/{todo_id} endpoint at `backend/src/api/todos.py`: extract user_id from JWT, query todo with WHERE id = <todo_id> AND user_id = <jwt_user_id>, return 404 (not 403) if not found or unauthorized to prevent enumeration
+- [x] T040 [US6] Add ownership verification to all todo endpoints: ensure all queries include `WHERE user_id = <jwt_user_id>` filter, never read user_id from URL/query params/request body (only from JWT sub claim), return 404 on ownership violations
+- [x] T041 [US6] Add security validation in JWT middleware at `backend/src/auth/middleware.py`: verify JWT sub claim exists, verify JWT signature with BETTER_AUTH_SECRET, verify expiration (<24h), return 401 for missing/invalid/expired tokens
+- [x] T042 [US6] Document user isolation enforcement in `backend/CLAUDE.md`: emphasize user_id MUST come exclusively from JWT sub claim, all todo queries MUST include user_id filter, 404 (not 403) on ownership violations
 
 **Checkpoint**: User data isolation is now enforced at API level - cross-user access is impossible
 
@@ -132,10 +133,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T043 [US3] Implement PATCH /api/todos/{todo_id}/complete endpoint at `backend/src/api/todos.py`: extract user_id from JWT, validate completed field (required boolean), query todo with ownership check (WHERE id = <todo_id> AND user_id = <jwt_user_id>), update completed status and updated_at timestamp, return 200 with updated todo (404 if not found/unauthorized)
-- [ ] T044 [US3] Create TodoItem component at `frontend/src/components/TodoItem.tsx` with checkbox for completion status, title with conditional strikethrough styling when completed, description display, visual distinction between completed/incomplete items
-- [ ] T045 [US3] Update TodoList component at `frontend/src/components/TodoList.tsx` to render individual TodoItem components for each todo
-- [ ] T046 [US3] Implement toggle completion handler in TodoItem component: call PATCH /api/todos/{id}/complete with opposite completed value, update local state optimistically (rollback on error), handle 404 (todo deleted or unauthorized) and 401 (token expired)
+- [x] T043 [US3] Implement PATCH /api/todos/{todo_id}/complete endpoint at `backend/src/api/todos.py`: extract user_id from JWT, validate completed field (required boolean), query todo with ownership check (WHERE id = <todo_id> AND user_id = <jwt_user_id>), update completed status and updated_at timestamp, return 200 with updated todo (404 if not found/unauthorized)
+- [x] T044 [US3] Create TodoItem component at `frontend/src/components/TodoItem.tsx` with checkbox for completion status, title with conditional strikethrough styling when completed, description display, visual distinction between completed/incomplete items
+- [x] T045 [US3] Update TodoList component at `frontend/src/components/TodoList.tsx` to render individual TodoItem components for each todo
+- [x] T046 [US3] Implement toggle completion handler in TodoItem component: call PATCH /api/todos/{id}/complete with opposite completed value, update local state optimistically (rollback on error), handle 404 (todo deleted or unauthorized) and 401 (token expired)
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, and 6 all work independently - users can register, create todos, and mark them complete/incomplete
 
@@ -149,9 +150,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T047 [US4] Implement PUT /api/todos/{todo_id} endpoint at `backend/src/api/todos.py`: extract user_id from JWT, validate title (required, trim whitespace, max 500 chars), validate description (optional, max 5000 chars), query todo with ownership check (WHERE id = <todo_id> AND user_id = <jwt_user_id>), update title/description and updated_at timestamp (completed field unchanged), return 200 with updated todo (404 if not found/unauthorized, 400 for validation errors)
-- [ ] T048 [US4] Create TodoEditForm component at `frontend/src/components/TodoEditForm.tsx` with title input (pre-filled with current value), description textarea (pre-filled), Save button, Cancel button (revert to original values), client-side validation (non-empty title after trim)
-- [ ] T049 [US4] Add edit mode state to TodoItem component at `frontend/src/components/TodoItem.tsx`: toggle between display mode (with Edit button) and edit mode (showing TodoEditForm), handle save (call PUT /api/todos/{id}), handle cancel (revert to original values), handle errors (400 validation, 404 not found, 401 expired token)
+- [x] T047 [US4] Implement PUT /api/todos/{todo_id} endpoint at `backend/src/api/todos.py`: extract user_id from JWT, validate title (required, trim whitespace, max 500 chars), validate description (optional, max 5000 chars), query todo with ownership check (WHERE id = <todo_id> AND user_id = <jwt_user_id>), update title/description and updated_at timestamp (completed field unchanged), return 200 with updated todo (404 if not found/unauthorized, 400 for validation errors)
+- [x] T048 [US4] Create TodoEditForm component at `frontend/src/components/TodoEditForm.tsx` with title input (pre-filled with current value), description textarea (pre-filled), Save button, Cancel button (revert to original values), client-side validation (non-empty title after trim)
+- [x] T049 [US4] Add edit mode state to TodoItem component at `frontend/src/components/TodoItem.tsx`: toggle between display mode (with Edit button) and edit mode (showing TodoEditForm), handle save (call PUT /api/todos/{id}), handle cancel (revert to original values), handle errors (400 validation, 404 not found, 401 expired token)
 
 **Checkpoint**: Users can now fully edit their todos with proper validation and error handling
 
@@ -165,8 +166,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T050 [US5] Implement DELETE /api/todos/{todo_id} endpoint at `backend/src/api/todos.py`: extract user_id from JWT, query todo with ownership check (WHERE id = <todo_id> AND user_id = <jwt_user_id>), delete from database, return 204 No Content (404 if not found/unauthorized)
-- [ ] T051 [US5] Add delete button to TodoItem component at `frontend/src/components/TodoItem.tsx`: show confirmation dialog on click ("Are you sure you want to delete this todo?"), call DELETE /api/todos/{id} on confirm, remove from local state on success, handle errors (404, 401), allow cancel to abort deletion
+- [x] T050 [US5] Implement DELETE /api/todos/{todo_id} endpoint at `backend/src/api/todos.py`: extract user_id from JWT, query todo with ownership check (WHERE id = <todo_id> AND user_id = <jwt_user_id>), delete from database, return 204 No Content (404 if not found/unauthorized)
+- [x] T051 [US5] Add delete button to TodoItem component at `frontend/src/components/TodoItem.tsx`: show confirmation dialog on click ("Are you sure you want to delete this todo?"), call DELETE /api/todos/{id} on confirm, remove from local state on success, handle errors (404, 401), allow cancel to abort deletion
 
 **Checkpoint**: All user stories complete - full CRUD functionality with authentication, authorization, and user isolation
 
@@ -176,13 +177,13 @@
 
 **Purpose**: Improvements that affect multiple user stories and final production readiness
 
-- [ ] T052 [P] Add loading states to all frontend forms and lists: display spinner during API requests, disable buttons during submission, show loading skeleton for todo list
-- [ ] T053 [P] Add comprehensive error handling across all backend endpoints: validate UUID formats, sanitize all inputs to prevent injection, catch database errors and return 503 Service Unavailable with user-friendly messages
-- [ ] T054 [P] Improve UI/UX with consistent styling: add CSS framework (Tailwind or similar), responsive design for mobile devices, consistent color scheme and spacing, accessible form labels and ARIA attributes
-- [ ] T055 Add timestamps display in TodoItem component: format created_at and updated_at with relative time (e.g., "2 hours ago"), show full timestamp on hover
+- [x] T052 [P] Add loading states to all frontend forms and lists: display spinner during API requests, disable buttons during submission, show loading skeleton for todo list
+- [x] T053 [P] Add comprehensive error handling across all backend endpoints: validate UUID formats, sanitize all inputs to prevent injection, catch database errors and return 503 Service Unavailable with user-friendly messages
+- [x] T054 [P] Improve UI/UX with consistent styling: add CSS framework (Tailwind or similar), responsive design for mobile devices, consistent color scheme and spacing, accessible form labels and ARIA attributes
+- [x] T055 Add timestamps display in TodoItem component: format created_at and updated_at with relative time (e.g., "2 hours ago"), show full timestamp on hover
 - [ ] T056 [P] Create quickstart documentation at `specs/002-phase2-fullstack-todo/quickstart.md`: prerequisites (Python 3.11+, Node.js 18+, PostgreSQL), environment setup steps, database migration commands, running backend (uvicorn), running frontend (npm run dev), testing full flow, common troubleshooting (JWT secret mismatch, database connection errors)
-- [ ] T057 [P] Add API documentation in backend: FastAPI automatic OpenAPI docs at /docs endpoint, add docstrings to all endpoints with parameter descriptions and response schemas
-- [ ] T058 [P] Security hardening: ensure HTTPS enforcement in production, add CORS configuration to only allow frontend origin, implement request size limits, add rate limiting headers documentation (implementation optional for MVP)
+- [x] T057 [P] Add API documentation in backend: FastAPI automatic OpenAPI docs at /docs endpoint, add docstrings to all endpoints with parameter descriptions and response schemas
+- [x] T058 [P] Security hardening: ensure HTTPS enforcement in production, add CORS configuration to only allow frontend origin, implement request size limits, add rate limiting headers documentation (implementation optional for MVP)
 - [ ] T059 Validate complete user journeys: end-to-end test of registration → login → create todos → mark complete → edit → delete → logout, verify all user isolation scenarios (cannot access other users' todos), verify token expiration handling (401 redirect to login)
 - [ ] T060 Code cleanup and refactoring: remove console.log statements, add TypeScript strict mode checks, ensure consistent error messages, add comments for complex logic (JWT verification, user isolation enforcement)
 

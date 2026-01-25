@@ -1,8 +1,7 @@
 /**
  * Centralized API client with automatic JWT attachment.
- * T020: API client with JWT from Better Auth, error handling, 401 redirect.
+ * T020: API client with JWT from localStorage, error handling, 401 redirect.
  */
-import { getToken, clearSession } from './auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -18,22 +17,40 @@ export class ApiError extends Error {
 }
 
 /**
+ * Get the authentication token from localStorage.
+ */
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
+}
+
+/**
+ * Clear authentication data from localStorage.
+ */
+export function clearAuth(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+}
+
+/**
  * Make an authenticated API request.
- * Automatically attaches JWT token from session.
+ * Automatically attaches JWT token from localStorage.
  * Handles 401 errors by redirecting to login.
  */
 export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
+  // Get token from localStorage
+  const token = getAuthToken();
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
 
-  // Attach JWT token if available
+  // Attach JWT token if available from Better Auth
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -46,7 +63,8 @@ export async function apiRequest<T = any>(
 
     // Handle 401 Unauthorized (token expired or invalid)
     if (response.status === 401) {
-      clearSession();
+      // Clear auth data from localStorage
+      clearAuth();
       if (typeof window !== 'undefined') {
         window.location.href = '/login?expired=true';
       }
@@ -90,23 +108,10 @@ export async function apiRequest<T = any>(
  * API client methods for common operations.
  */
 export const api = {
-  // Auth endpoints
-  register: (email: string, password: string) =>
-    apiRequest('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
-
-  login: (email: string, password: string) =>
-    apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
-
-  // Todo endpoints
+  // Todo endpoints (Better Auth handles auth at the session level)
   getTodos: () => apiRequest('/api/todos'),
 
-  createTodo: (title: string, description?: string) =>
+  createTodo: (title: string, description: string | null) =>
     apiRequest('/api/todos', {
       method: 'POST',
       body: JSON.stringify({ title, description }),
@@ -114,7 +119,7 @@ export const api = {
 
   getTodo: (id: string) => apiRequest(`/api/todos/${id}`),
 
-  updateTodo: (id: string, title: string, description?: string) =>
+  updateTodo: (id: string, title: string, description: string | null) =>
     apiRequest(`/api/todos/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ title, description }),

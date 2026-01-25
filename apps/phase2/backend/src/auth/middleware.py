@@ -4,7 +4,7 @@ T016: Middleware to extract and verify JWT from Authorization header.
 """
 from fastapi import Request, HTTPException, status
 from typing import Optional
-from .jwt import extract_user_id
+from auth.jwt import extract_user_id
 
 
 async def verify_jwt_middleware(request: Request) -> Optional[str]:

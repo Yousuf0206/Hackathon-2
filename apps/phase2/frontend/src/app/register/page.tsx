@@ -5,11 +5,8 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/library/api';
-import { setSession } from '@/library/auth';
-import { ApiError } from '@/library/api';
+import { useRouter } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,24 +71,40 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await api.register(email, password);
-
-      setSession({
-        token: response.token,
-        user: {
-          id: response.user.id,
-          email: response.user.email,
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setError('This email is already registered. Please log in instead.');
+        } else if (data.detail) {
+          setError(data.detail);
+        } else {
+          setError('Registration failed. Please try again.');
+        }
+        return;
+      }
+
+      // Store the token in localStorage for the API client
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+      }
+
+      // Redirect to todos page on success
       router.push('/todos');
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 409) {
-          setError('This email is already registered. Please log in instead.');
-        } else {
-          setError(err.message || 'Registration failed. Please try again.');
-        }
+      console.error('Registration error:', err);
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Cannot connect to server. Please check if the backend is running.');
       } else {
         setError('An unexpected error occurred. Please try again.');
       }

@@ -4,7 +4,7 @@ T010: Create database engine and session factory using SQLModel with PostgreSQL.
 """
 from sqlmodel import create_engine, Session, SQLModel
 from typing import Generator
-from .config import settings
+from config import settings
 
 
 # Create engine with connection pooling

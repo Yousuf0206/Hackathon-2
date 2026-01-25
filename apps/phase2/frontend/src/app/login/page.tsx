@@ -7,9 +7,6 @@
 import { useState, FormEvent, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/library/api';
-import { setSession } from '@/library/auth';
-import { ApiError } from '@/library/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,27 +47,38 @@ function LoginContent() {
     setLoading(true);
 
     try {
-      const response = await api.login(email, password);
-
-      setSession({
-        token: response.token,
-        user: {
-          id: response.user.id,
-          email: response.user.email,
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Invalid email or password');
+        } else if (data.detail) {
+          setError(data.detail);
+        } else {
+          setError('Login failed. Please try again.');
+        }
+        return;
+      }
+
+      // Store the token in localStorage for the API client
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+      }
+
+      // Redirect to todos page on success
       router.push('/todos');
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 401) {
-          setError('Invalid credentials. Please check your email and password.');
-        } else {
-          setError(err.message || 'Login failed. Please try again.');
-        }
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -172,14 +180,18 @@ function LoginContent() {
                 'Sign In'
               )}
             </button>
-          </form>
 
-          <div className="card-footer">
-            <p>
-              Don&apos;t have an account?{' '}
-              <Link href="/register">Create one</Link>
-            </p>
-          </div>
+            <div className="divider">
+              <span>or</span>
+            </div>
+
+            <div className="card-footer">
+              <p>
+                Don&apos;t have an account?{' '}
+                <Link href="/register">Create one</Link>
+              </p>
+            </div>
+          </form>
         </div>
 
         <div className="login-illustration">
@@ -398,17 +410,24 @@ function LoginContent() {
           cursor: not-allowed;
         }
 
-        .spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
+        .divider {
+          display: flex;
+          align-items: center;
+          margin: 1.5rem 0;
         }
 
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+        .divider::before,
+        .divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: var(--gray-300);
+        }
+
+        .divider span {
+          padding: 0 1rem;
+          color: var(--gray-500);
+          font-size: 0.875rem;
         }
 
         .card-footer {

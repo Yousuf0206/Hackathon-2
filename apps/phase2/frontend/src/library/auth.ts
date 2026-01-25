@@ -1,9 +1,9 @@
 /**
- * Better Auth configuration.
- * T019: Configure Better Auth with JWT plugin, shared secret, 24h expiry.
+ * Authentication utilities using localStorage for JWT token storage.
+ * T019: JWT-based authentication with 24h expiry.
  */
 
-interface AuthSession {
+export interface AuthSession {
   token: string;
   user: {
     id: string;
@@ -12,30 +12,19 @@ interface AuthSession {
 }
 
 /**
- * Store authentication session in localStorage.
- * In production, Better Auth would handle this with secure cookies.
- */
-export function setSession(session: AuthSession): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('auth_session', JSON.stringify(session));
-  }
-}
-
-/**
- * Get current authentication session.
+ * Get current authentication session from localStorage.
  */
 export function getSession(): AuthSession | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  if (typeof window === 'undefined') return null;
 
-  const sessionData = localStorage.getItem('auth_session');
-  if (!sessionData) {
-    return null;
-  }
+  const token = localStorage.getItem('auth_token');
+  const userStr = localStorage.getItem('auth_user');
+
+  if (!token || !userStr) return null;
 
   try {
-    return JSON.parse(sessionData);
+    const user = JSON.parse(userStr);
+    return { token, user };
   } catch {
     return null;
   }
@@ -45,9 +34,9 @@ export function getSession(): AuthSession | null {
  * Clear authentication session (logout).
  */
 export function clearSession(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('auth_session');
-  }
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
 }
 
 /**
@@ -63,4 +52,14 @@ export function isAuthenticated(): boolean {
 export function getToken(): string | null {
   const session = getSession();
   return session?.token || null;
+}
+
+/**
+ * Sign out the user and redirect to login.
+ */
+export function signOut(): void {
+  clearSession();
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
 }

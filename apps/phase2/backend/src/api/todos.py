@@ -10,9 +10,9 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
-from ..database import get_session
-from ..models.todo import Todo
-from ..dependencies import get_current_user
+from database import get_session
+from models.todo import Todo
+from dependencies import get_current_user
 
 
 router = APIRouter()

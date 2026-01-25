@@ -5,16 +5,82 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { clearSession, getSession } from '@/library/auth';
+import { useState, useEffect } from 'react';
+import { getSession, signOut, AuthSession } from '@/library/auth';
 
 export default function Navbar() {
   const router = useRouter();
-  const session = getSession();
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const authSession = getSession();
+    setSession(authSession);
+    setIsLoading(false);
+  }, []);
 
   const handleLogout = () => {
-    clearSession();
+    signOut();
     router.push('/login');
   };
+
+  if (isLoading) {
+    // Don't render user controls while loading
+    return (
+      <nav className="navbar">
+        <div className="navbar-container">
+          <div className="navbar-brand">
+            <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+            <span className="brand-text">TaskFlow</span>
+          </div>
+        </div>
+
+        <style jsx>{`
+          .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-xs);
+          }
+
+          .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+          }
+
+          .brand-icon {
+            width: 28px;
+            height: 28px;
+            color: var(--primary-600);
+          }
+
+          .brand-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            letter-spacing: -0.025em;
+          }
+        `}</style>
+      </nav>
+    );
+  }
 
   return (
     <nav className="navbar">

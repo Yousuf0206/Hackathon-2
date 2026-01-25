@@ -1,10 +1,11 @@
 /**
- * Root layout with global styles and Inter font.
- * Provides consistent typography across the application.
+ * Root layout with Better Auth provider and global styles.
+ * T023: Root layout with Better Auth provider as constitutionally required.
  */
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from './auth-provider';
 
 export const metadata: Metadata = {
   title: 'TaskFlow - Organize Your Tasks, Amplify Your Productivity',
@@ -24,7 +25,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

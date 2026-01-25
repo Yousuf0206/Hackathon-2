@@ -43,7 +43,7 @@ export function TodoEditForm({ todo, onSave, onCancel }: TodoEditFormProps) {
     setIsSubmitting(true);
 
     try {
-      await api.updateTodo(todo.id, trimmedTitle, description || undefined);
+      await api.updateTodo(todo.id, trimmedTitle, description || null);
       onSave();
     } catch (err) {
       if (err instanceof ApiError) {

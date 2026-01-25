@@ -42,7 +42,7 @@ export function TodoForm({ onTodoCreated }: TodoFormProps) {
     setIsSubmitting(true);
 
     try {
-      await api.createTodo(trimmedTitle, description || undefined);
+      await api.createTodo(trimmedTitle, description || null);
 
       // Clear form on success
       setTitle('');

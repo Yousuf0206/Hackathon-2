@@ -1,0 +1,52 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - sqlite-data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./todo_app.db
+      - BETTER_AUTH_SECRET=supersecretkeyfordevelopment
+      # Include container network access for CORS
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3002,http://frontend:3000
+      - NODE_ENV=production
+    env_file:
+      - ./backend/.env
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --log-level info
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"  # Map host port 3002 to container port 3000
+    environment:
+      # Container-to-container communication uses service names
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_BETTER_AUTH_URL=http://backend:8000
+      - BETTER_AUTH_SECRET=supersecretkeyfordevelopment
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  sqlite-data:

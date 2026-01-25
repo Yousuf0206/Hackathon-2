@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\user\\\\Desktop\\\\Hackathon 2\\\\apps\\\\phase2\\\\frontend''; npm run build\")"
+    ]
+  }
+}

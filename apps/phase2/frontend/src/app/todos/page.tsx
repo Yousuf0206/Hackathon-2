@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/library/api';
 import { Todo, TodoListResponse } from '@/library/types';
-import { isAuthenticated } from '@/library/auth';
+import { isAuthenticated, clearSession } from '@/library/auth';
 import { TodoForm }  from '@/components/TodoForm';
 import { TodoList } from '@/components/TodoList';
 import Navbar from '@/components/Navbar';
@@ -21,18 +21,27 @@ export default function TodosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0 });
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
-    }
-  }, [router]);
+    const checkAuth = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        router.push('/login');
+        setAuthChecked(true);
+        return;
+      }
 
-  // Fetch todos on mount
-  useEffect(() => {
-    fetchTodos();
-  }, []);
+      // Fetch todos for authenticated user
+      fetchTodos();
+      setAuthChecked(true);
+    };
+
+    checkAuth();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   // Update stats when todos change
   useEffect(() => {
@@ -54,6 +63,9 @@ export default function TodosPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
+          // Clear session and redirect to login
+          await clearSession();
+          router.push('/login');
           return;
         }
         setError(err.message);
@@ -75,91 +87,119 @@ export default function TodosPage() {
 
   return (
     <div className="page-wrapper">
-      <Navbar />
-
-      <main className="main-content">
-        <div className="container">
-          {/* Header Section */}
-          <header className="dashboard-header">
-            <div className="header-content">
-              <h1 className="page-title">My Tasks</h1>
-              <p className="page-subtitle">Organize and track your daily goals</p>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon stat-total">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                </div>
-                <div className="stat-info">
-                  <span className="stat-value">{stats.total}</span>
-                  <span className="stat-label">Total Tasks</span>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon stat-pending">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12,6 12,12 16,14" />
-                  </svg>
-                </div>
-                <div className="stat-info">
-                  <span className="stat-value">{stats.pending}</span>
-                  <span className="stat-label">Pending</span>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon stat-completed">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22,4 12,14.01 9,11.01" />
-                  </svg>
-                </div>
-                <div className="stat-info">
-                  <span className="stat-value">{stats.completed}</span>
-                  <span className="stat-label">Completed</span>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Error Banner */}
-          {error && (
-            <div className="error-banner">
-              <svg className="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <span>{error}</span>
-              <button onClick={fetchTodos} className="retry-button">
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {/* Todo Form and List */}
-          <div className="dashboard-content">
-            <TodoForm onTodoCreated={handleTodoCreated} />
-            <TodoList
-              todos={todos}
-              isLoading={isLoading}
-              onTodoUpdated={handleTodoUpdated}
-            />
-          </div>
+      {/* Don't render the page until auth is checked */}
+      {!authChecked ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading...</p>
         </div>
-      </main>
+      ) : (
+        <>
+          <Navbar />
 
+          <main className="main-content">
+            <div className="container">
+              {/* Header Section */}
+              <header className="dashboard-header">
+                <div className="header-content">
+                  <h1 className="page-title">My Tasks</h1>
+                  <p className="page-subtitle">Organize and track your daily goals</p>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <div className="stat-icon stat-total">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 11l3 3L22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
+                    </div>
+                    <div className="stat-info">
+                      <span className="stat-value">{stats.total}</span>
+                      <span className="stat-label">Total Tasks</span>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon stat-pending">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12,6 12,12 16,14" />
+                      </svg>
+                    </div>
+                    <div className="stat-info">
+                      <span className="stat-value">{stats.pending}</span>
+                      <span className="stat-label">Pending</span>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon stat-completed">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22,4 12,14.01 9,11.01" />
+                      </svg>
+                    </div>
+                    <div className="stat-info">
+                      <span className="stat-value">{stats.completed}</span>
+                      <span className="stat-label">Completed</span>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              {/* Error Banner */}
+              {error && (
+                <div className="error-banner">
+                  <svg className="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>{error}</span>
+                  <button onClick={fetchTodos} className="retry-button">
+                    Try Again
+                  </button>
+                </div>
+              )}
+
+              {/* Todo Form and List */}
+              <div className="dashboard-content">
+                <TodoForm onTodoCreated={handleTodoCreated} />
+                <TodoList
+                  todos={todos}
+                  isLoading={isLoading}
+                  onTodoUpdated={handleTodoUpdated}
+                />
+              </div>
+            </div>
+          </main>
+        </>
+      )}
       <style jsx>{`
         .page-wrapper {
           min-height: 100vh;
           background: var(--gray-50);
+        }
+
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          background: var(--gray-50);
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid var(--gray-200);
+          border-top-color: var(--primary-600);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 1rem;
         }
 
         .main-content {
@@ -320,6 +360,10 @@ export default function TodosPage() {
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
