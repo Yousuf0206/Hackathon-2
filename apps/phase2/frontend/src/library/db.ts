@@ -1,8 +1,9 @@
 /**
- * Simple in-memory database with global persistence
- * Uses Node.js global to persist data between API calls in dev mode
- * For production on Vercel, use Vercel Postgres or Vercel KV
+ * Database module using Neon Serverless Postgres (Vercel Postgres)
+ * Falls back to in-memory storage for local development without database
  */
+
+import { neon } from '@neondatabase/serverless';
 
 // Types
 export interface User {
@@ -23,26 +24,29 @@ export interface Todo {
   updated_at: string;
 }
 
-interface Database {
+// Check if we have a database URL configured
+const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+
+// Create SQL client if database URL is available
+const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
+
+// ============================================
+// In-memory fallback for local development
+// ============================================
+interface InMemoryDatabase {
   users: User[];
   todos: Todo[];
 }
 
-// Use global to persist across hot reloads in development
-// and across API route invocations
 const globalForDb = globalThis as unknown as {
-  db: Database | undefined;
+  inMemoryDb: InMemoryDatabase | undefined;
 };
 
-// Initialize or get existing database
-function getDb(): Database {
-  if (!globalForDb.db) {
-    globalForDb.db = {
-      users: [],
-      todos: [],
-    };
+function getInMemoryDb(): InMemoryDatabase {
+  if (!globalForDb.inMemoryDb) {
+    globalForDb.inMemoryDb = { users: [], todos: [] };
   }
-  return globalForDb.db;
+  return globalForDb.inMemoryDb;
 }
 
 // Generate UUID
@@ -54,86 +58,348 @@ export function generateId(): string {
   });
 }
 
+// ============================================
+// Initialize database tables
+// ============================================
+export async function initDatabase(): Promise<void> {
+  if (!sql) {
+    console.log('No DATABASE_URL configured, using in-memory storage');
+    return;
+  }
+
+  try {
+    // Create users table
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Create todos table
+    await sql`
+      CREATE TABLE IF NOT EXISTS todos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(500) NOT NULL,
+        description TEXT,
+        completed BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Create index on user_id for faster queries
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id)
+    `;
+
+    console.log('Database tables initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    throw error;
+  }
+}
+
+// ============================================
 // User operations
-export function findUserByEmail(email: string): User | undefined {
-  const db = getDb();
-  return db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-}
+// ============================================
+export async function findUserByEmail(email: string): Promise<User | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  }
 
-export function findUserById(id: string): User | undefined {
-  const db = getDb();
-  return db.users.find(u => u.id === id);
-}
+  const result = await sql`
+    SELECT id, email, password_hash, created_at, updated_at
+    FROM users
+    WHERE LOWER(email) = LOWER(${email})
+    LIMIT 1
+  `;
 
-export function createUser(email: string, passwordHash: string): User {
-  const db = getDb();
-  const now = new Date().toISOString();
-  const user: User = {
-    id: generateId(),
-    email: email.toLowerCase(),
-    password_hash: passwordHash,
-    created_at: now,
-    updated_at: now,
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    email: row.email,
+    password_hash: row.password_hash,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
   };
-  db.users.push(user);
-  return user;
 }
 
+export async function findUserById(id: string): Promise<User | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.users.find(u => u.id === id) || null;
+  }
+
+  const result = await sql`
+    SELECT id, email, password_hash, created_at, updated_at
+    FROM users
+    WHERE id = ${id}::uuid
+    LIMIT 1
+  `;
+
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    email: row.email,
+    password_hash: row.password_hash,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
+  };
+}
+
+export async function createUser(email: string, passwordHash: string): Promise<User> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const now = new Date().toISOString();
+    const user: User = {
+      id: generateId(),
+      email: email.toLowerCase(),
+      password_hash: passwordHash,
+      created_at: now,
+      updated_at: now,
+    };
+    db.users.push(user);
+    return user;
+  }
+
+  const result = await sql`
+    INSERT INTO users (email, password_hash)
+    VALUES (${email.toLowerCase()}, ${passwordHash})
+    RETURNING id, email, password_hash, created_at, updated_at
+  `;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    email: row.email,
+    password_hash: row.password_hash,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
+  };
+}
+
+// ============================================
 // Todo operations
-export function findTodosByUserId(userId: string): Todo[] {
-  const db = getDb();
-  return db.todos.filter(t => t.user_id === userId);
+// ============================================
+export async function findTodosByUserId(userId: string): Promise<Todo[]> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.todos.filter(t => t.user_id === userId);
+  }
+
+  const result = await sql`
+    SELECT id, user_id, title, description, completed, created_at, updated_at
+    FROM todos
+    WHERE user_id = ${userId}::uuid
+    ORDER BY created_at DESC
+  `;
+
+  return result.map(row => ({
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    completed: row.completed,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
+  }));
 }
 
-export function findTodoById(id: string): Todo | undefined {
-  const db = getDb();
-  return db.todos.find(t => t.id === id);
-}
+export async function findTodoById(id: string): Promise<Todo | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.todos.find(t => t.id === id) || null;
+  }
 
-export function findTodoByIdAndUserId(id: string, userId: string): Todo | undefined {
-  const db = getDb();
-  return db.todos.find(t => t.id === id && t.user_id === userId);
-}
+  const result = await sql`
+    SELECT id, user_id, title, description, completed, created_at, updated_at
+    FROM todos
+    WHERE id = ${id}::uuid
+    LIMIT 1
+  `;
 
-export function createTodo(userId: string, title: string, description: string | null): Todo {
-  const db = getDb();
-  const now = new Date().toISOString();
-  const todo: Todo = {
-    id: generateId(),
-    user_id: userId,
-    title,
-    description,
-    completed: false,
-    created_at: now,
-    updated_at: now,
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    completed: row.completed,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
   };
-  db.todos.push(todo);
-  return todo;
 }
 
-export function updateTodo(id: string, userId: string, updates: Partial<Pick<Todo, 'title' | 'description' | 'completed'>>): Todo | null {
-  const db = getDb();
-  const index = db.todos.findIndex(t => t.id === id && t.user_id === userId);
-  if (index === -1) return null;
+export async function findTodoByIdAndUserId(id: string, userId: string): Promise<Todo | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.todos.find(t => t.id === id && t.user_id === userId) || null;
+  }
 
-  db.todos[index] = {
-    ...db.todos[index],
-    ...updates,
-    updated_at: new Date().toISOString(),
+  const result = await sql`
+    SELECT id, user_id, title, description, completed, created_at, updated_at
+    FROM todos
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+    LIMIT 1
+  `;
+
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    completed: row.completed,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
   };
-  return db.todos[index];
 }
 
-export function deleteTodo(id: string, userId: string): boolean {
-  const db = getDb();
-  const index = db.todos.findIndex(t => t.id === id && t.user_id === userId);
-  if (index === -1) return false;
+export async function createTodo(userId: string, title: string, description: string | null): Promise<Todo> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const now = new Date().toISOString();
+    const todo: Todo = {
+      id: generateId(),
+      user_id: userId,
+      title,
+      description,
+      completed: false,
+      created_at: now,
+      updated_at: now,
+    };
+    db.todos.push(todo);
+    return todo;
+  }
 
-  db.todos.splice(index, 1);
-  return true;
+  const result = await sql`
+    INSERT INTO todos (user_id, title, description)
+    VALUES (${userId}::uuid, ${title}, ${description})
+    RETURNING id, user_id, title, description, completed, created_at, updated_at
+  `;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    completed: row.completed,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
+  };
 }
 
-// Export database for debugging
-export function getDatabase(): Database {
-  return getDb();
+export async function updateTodo(
+  id: string,
+  userId: string,
+  updates: Partial<Pick<Todo, 'title' | 'description' | 'completed'>>
+): Promise<Todo | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const index = db.todos.findIndex(t => t.id === id && t.user_id === userId);
+    if (index === -1) return null;
+
+    db.todos[index] = {
+      ...db.todos[index],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    return db.todos[index];
+  }
+
+  // Build dynamic update query
+  const setClauses: string[] = ['updated_at = NOW()'];
+  const values: any[] = [];
+
+  if (updates.title !== undefined) {
+    setClauses.push(`title = $${values.length + 1}`);
+    values.push(updates.title);
+  }
+  if (updates.description !== undefined) {
+    setClauses.push(`description = $${values.length + 1}`);
+    values.push(updates.description);
+  }
+  if (updates.completed !== undefined) {
+    setClauses.push(`completed = $${values.length + 1}`);
+    values.push(updates.completed);
+  }
+
+  // Use individual update queries based on what's being updated
+  let result;
+  if (updates.title !== undefined && updates.description !== undefined) {
+    result = await sql`
+      UPDATE todos
+      SET title = ${updates.title}, description = ${updates.description}, updated_at = NOW()
+      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      RETURNING id, user_id, title, description, completed, created_at, updated_at
+    `;
+  } else if (updates.title !== undefined) {
+    result = await sql`
+      UPDATE todos
+      SET title = ${updates.title}, updated_at = NOW()
+      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      RETURNING id, user_id, title, description, completed, created_at, updated_at
+    `;
+  } else if (updates.completed !== undefined) {
+    result = await sql`
+      UPDATE todos
+      SET completed = ${updates.completed}, updated_at = NOW()
+      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      RETURNING id, user_id, title, description, completed, created_at, updated_at
+    `;
+  } else {
+    result = await sql`
+      UPDATE todos
+      SET updated_at = NOW()
+      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      RETURNING id, user_id, title, description, completed, created_at, updated_at
+    `;
+  }
+
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    completed: row.completed,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
+  };
+}
+
+export async function deleteTodo(id: string, userId: string): Promise<boolean> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const index = db.todos.findIndex(t => t.id === id && t.user_id === userId);
+    if (index === -1) return false;
+
+    db.todos.splice(index, 1);
+    return true;
+  }
+
+  const result = await sql`
+    DELETE FROM todos
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+    RETURNING id
+  `;
+
+  return result.length > 0;
 }

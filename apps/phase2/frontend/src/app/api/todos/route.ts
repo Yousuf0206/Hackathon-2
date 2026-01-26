@@ -4,12 +4,14 @@
  * POST - Create a new todo
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { findTodosByUserId, createTodo } from '@/lib/db';
+import { findTodosByUserId, createTodo, initDatabase } from '@/lib/db';
 import { extractUserId, getTokenFromHeader } from '@/lib/jwt';
 
 // GET /api/todos - List todos
 export async function GET(request: NextRequest) {
   try {
+    await initDatabase();
+
     const authHeader = request.headers.get('authorization');
     const token = getTokenFromHeader(authHeader);
 
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const todos = findTodosByUserId(userId);
+    const todos = await findTodosByUserId(userId);
 
     return NextResponse.json({
       todos: todos.map(todo => ({
@@ -53,6 +55,8 @@ export async function GET(request: NextRequest) {
 // POST /api/todos - Create todo
 export async function POST(request: NextRequest) {
   try {
+    await initDatabase();
+
     const authHeader = request.headers.get('authorization');
     const token = getTokenFromHeader(authHeader);
 
@@ -96,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const todo = createTodo(userId, title.trim(), description || null);
+    const todo = await createTodo(userId, title.trim(), description || null);
 
     return NextResponse.json(
       {

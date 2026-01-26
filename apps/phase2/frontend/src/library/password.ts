@@ -19,7 +19,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<ArrayBuffe
   return crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: salt,
+      salt: salt.buffer as ArrayBuffer,
       iterations: ITERATIONS,
       hash: 'SHA-256',
     },
@@ -43,7 +43,7 @@ export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const derivedKey = await deriveKey(password, salt);
 
-  const saltHex = arrayBufferToHex(salt.buffer);
+  const saltHex = arrayBufferToHex(salt.buffer as ArrayBuffer);
   const hashHex = arrayBufferToHex(derivedKey);
 
   // Format: salt$hash

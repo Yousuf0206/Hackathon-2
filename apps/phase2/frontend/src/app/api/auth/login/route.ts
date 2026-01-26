@@ -2,12 +2,15 @@
  * POST /api/auth/login - Login user
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { findUserByEmail } from '@/lib/db';
+import { findUserByEmail, initDatabase } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 import { createAccessToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize database tables if needed
+    await initDatabase();
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
 
     // Generic error to prevent user enumeration
     const invalidCredentials = NextResponse.json(

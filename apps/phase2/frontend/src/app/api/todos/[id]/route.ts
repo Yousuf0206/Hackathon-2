@@ -5,7 +5,7 @@
  * DELETE - Delete a todo
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { findTodoByIdAndUserId, updateTodo, deleteTodo } from '@/lib/db';
+import { findTodoByIdAndUserId, updateTodo, deleteTodo, initDatabase } from '@/lib/db';
 import { extractUserId, getTokenFromHeader } from '@/lib/jwt';
 
 interface RouteParams {
@@ -15,6 +15,8 @@ interface RouteParams {
 // GET /api/todos/[id] - Get single todo
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    await initDatabase();
+
     const { id } = await params;
     const authHeader = request.headers.get('authorization');
     const token = getTokenFromHeader(authHeader);
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const todo = findTodoByIdAndUserId(id, userId);
+    const todo = await findTodoByIdAndUserId(id, userId);
     if (!todo) {
       return NextResponse.json(
         { detail: 'Todo not found' },
@@ -63,6 +65,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/todos/[id] - Update todo
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    await initDatabase();
+
     const { id } = await params;
     const authHeader = request.headers.get('authorization');
     const token = getTokenFromHeader(authHeader);
@@ -107,7 +111,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const todo = updateTodo(id, userId, {
+    const todo = await updateTodo(id, userId, {
       title: title.trim(),
       description: description || null,
     });
@@ -140,6 +144,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/todos/[id] - Delete todo
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    await initDatabase();
+
     const { id } = await params;
     const authHeader = request.headers.get('authorization');
     const token = getTokenFromHeader(authHeader);
@@ -159,7 +165,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const deleted = deleteTodo(id, userId);
+    const deleted = await deleteTodo(id, userId);
     if (!deleted) {
       return NextResponse.json(
         { detail: 'Todo not found' },

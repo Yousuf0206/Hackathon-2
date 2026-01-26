@@ -2,12 +2,15 @@
  * POST /api/auth/register - Register a new user
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { findUserByEmail, createUser } from '@/lib/db';
+import { findUserByEmail, createUser, initDatabase } from '@/lib/db';
 import { hashPassword } from '@/lib/password';
 import { createAccessToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize database tables if needed
+    await initDatabase();
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { detail: 'Email already registered' },
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Hash password and create user
     const passwordHash = await hashPassword(password);
-    const user = createUser(email, passwordHash);
+    const user = await createUser(email, passwordHash);
 
     // Generate JWT token
     const token = await createAccessToken(user.id);

@@ -2,7 +2,7 @@
  * PATCH /api/todos/[id]/complete - Toggle todo completion status
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { updateTodo } from '@/lib/db';
+import { updateTodo, initDatabase } from '@/lib/db';
 import { extractUserId, getTokenFromHeader } from '@/lib/jwt';
 
 interface RouteParams {
@@ -11,6 +11,8 @@ interface RouteParams {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    await initDatabase();
+
     const { id } = await params;
     const authHeader = request.headers.get('authorization');
     const token = getTokenFromHeader(authHeader);
@@ -40,7 +42,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const todo = updateTodo(id, userId, { completed });
+    const todo = await updateTodo(id, userId, { completed });
 
     if (!todo) {
       return NextResponse.json(
