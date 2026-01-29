@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     better_auth_secret: str
     cors_origins: str = "http://localhost:3000,http://localhost:3002"
     debug: bool = False
+    openai_api_key: str = ""
 
     class Config:
         env_file = str(Path(__file__).parent.parent / ".env")

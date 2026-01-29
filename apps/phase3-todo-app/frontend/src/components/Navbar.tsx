@@ -7,6 +7,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getSession, signOut, AuthSession } from '@/library/auth';
+import ChatToggleButton from '@/components/ChatToggleButton';
 
 export default function Navbar() {
   const router = useRouter();
@@ -95,6 +96,7 @@ export default function Navbar() {
 
         {session && (
           <div className="navbar-user">
+            <ChatToggleButton />
             <div className="user-info">
               <div className="user-avatar">
                 {session.user.email.charAt(0).toUpperCase()}

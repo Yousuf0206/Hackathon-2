@@ -6,6 +6,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from './auth-provider';
+import { ChatPanelProvider } from '@/contexts/ChatPanelContext';
+import ChatPanel from '@/components/ChatPanel';
 
 export const metadata: Metadata = {
   title: 'TaskFlow - Organize Your Tasks, Amplify Your Productivity',
@@ -27,7 +29,10 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body>
         <AuthProvider>
-          {children}
+          <ChatPanelProvider>
+            {children}
+            <ChatPanel />
+          </ChatPanelProvider>
         </AuthProvider>
       </body>
     </html>

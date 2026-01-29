@@ -1,9 +1,10 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Enable standalone output for Docker deployment
-  // This creates a minimal server.js file with all dependencies bundled
-  output: 'standalone',
+  // Set the correct root for monorepo structure
+  outputFileTracingRoot: path.join(__dirname, './'),
 }
 
 module.exports = nextConfig

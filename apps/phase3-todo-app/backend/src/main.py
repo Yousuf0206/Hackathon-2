@@ -92,3 +92,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 # T034: Mount todos router
 from api import todos
 app.include_router(todos.router, prefix="/api/todos", tags=["todos"])
+
+# Phase III: Mount chat router
+from api import chat
+app.include_router(chat.router, tags=["chat"])
