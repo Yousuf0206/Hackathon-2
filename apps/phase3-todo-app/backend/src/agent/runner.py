@@ -18,8 +18,8 @@ Per spec section 6 - Processing Rules:
 """
 
 import json
-from typing import List, Dict, Any, Optional
-from openai import AsyncOpenAI
+from typing import List, Dict, Any
+from openai import AsyncOpenAI, AuthenticationError, RateLimitError, APIError
 
 from config import settings
 from agent.prompts import SYSTEM_PROMPT
@@ -90,12 +90,19 @@ async def run_agent(
         iteration += 1
 
         # Call OpenAI
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=openai_messages,
-            tools=tools if tools else None,
-            tool_choice="auto" if tools else None
-        )
+        try:
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=openai_messages,
+                tools=tools if tools else None,
+                tool_choice="auto" if tools else None
+            )
+        except AuthenticationError:
+            raise ValueError("OpenAI API key is invalid or expired. Please update OPENAI_API_KEY.")
+        except RateLimitError:
+            raise ValueError("OpenAI rate limit reached. Please try again in a moment.")
+        except APIError as e:
+            raise ValueError(f"OpenAI API error: {e.message}")
 
         assistant_message = response.choices[0].message
 

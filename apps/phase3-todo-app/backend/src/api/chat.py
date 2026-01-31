@@ -11,6 +11,8 @@ Per constitution - Stateless Server Law:
 - Conversation context reconstructed from database each request
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
@@ -27,7 +29,7 @@ from models.message import MessageRole
 from agent.runner import run_agent
 
 
-router = APIRouter(prefix="/api", tags=["chat"])
+router = APIRouter(tags=["chat"])
 
 
 class ChatRequest(BaseModel):
@@ -127,9 +129,15 @@ async def chat(
             messages=message_history,
             user_message=request.message
         )
+    except ValueError as e:
+        # Known agent errors (API key invalid, rate limit, etc.)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e)
+        )
     except Exception as e:
-        # Log error but return safe message
-        print(f"Agent error: {e}")
+        # Unexpected errors - log but return safe message
+        logging.getLogger(__name__).error(f"Agent error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process your request. Please try again."

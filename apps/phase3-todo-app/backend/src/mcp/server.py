@@ -15,7 +15,6 @@ Per constitution section IV.C - Tool Determinism Law:
 
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
-from enum import Enum
 
 
 class ToolError(Exception):
@@ -42,7 +41,7 @@ class NotFoundError(ToolError):
 class ToolResult:
     """Result of an MCP tool execution."""
     success: bool
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[Any] = None
     error: Optional[str] = None
 
 

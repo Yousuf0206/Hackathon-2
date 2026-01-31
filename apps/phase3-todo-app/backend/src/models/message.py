@@ -8,7 +8,7 @@ Per constitution section VII: Conversation State Law
 """
 
 from sqlmodel import SQLModel, Field
-from typing import Optional, Literal
+from typing import Optional
 from datetime import datetime
 from enum import Enum
 

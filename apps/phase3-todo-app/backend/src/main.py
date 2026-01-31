@@ -43,6 +43,12 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Database connection failed: {e}")
         raise
 
+    # Validate OpenAI API key
+    if not settings.openai_api_key:
+        logger.warning("⚠️ OPENAI_API_KEY is not set - chat functionality will not work")
+    else:
+        logger.info("✅ OpenAI API key configured")
+
     logger.info(f"✅ Backend ready on http://0.0.0.0:8000")
     logger.info(f"📝 API documentation: http://0.0.0.0:8000/docs")
 
@@ -62,7 +68,7 @@ app = FastAPI(
 )
 
 # Configure CORS
-origins = settings.cors_origins.split(",")
+origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -95,4 +101,4 @@ app.include_router(todos.router, prefix="/api/todos", tags=["todos"])
 
 # Phase III: Mount chat router
 from api import chat
-app.include_router(chat.router, tags=["chat"])
+app.include_router(chat.router, prefix="/api", tags=["chat"])
