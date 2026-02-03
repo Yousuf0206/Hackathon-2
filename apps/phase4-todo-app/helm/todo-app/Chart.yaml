@@ -1,0 +1,14 @@
+apiVersion: v2
+name: todo-app
+description: Phase IV Cloud-Native Todo AI Chatbot
+type: application
+version: 0.1.0
+appVersion: "4.0.0"
+
+dependencies:
+  - name: backend
+    version: 0.1.0
+    repository: file://charts/backend
+  - name: frontend
+    version: 0.1.0
+    repository: file://charts/frontend

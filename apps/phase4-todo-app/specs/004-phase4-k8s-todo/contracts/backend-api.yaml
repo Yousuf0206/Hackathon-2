@@ -1,0 +1,243 @@
+openapi: "3.0.3"
+info:
+  title: Phase IV Todo AI Chatbot — Backend API
+  version: "4.0.0"
+  description: |
+    API contract for the Phase IV Todo AI Chatbot backend.
+    All endpoints require JWT authentication unless noted.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: http://backend:8000
+    description: Docker/Kubernetes internal
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Used by Kubernetes liveness and readiness probes (FR-025)
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: phase4-todo-api
+
+  /api/auth/register:
+    post:
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "201":
+          description: User created
+        "409":
+          description: Email already exists
+
+  /api/auth/login:
+    post:
+      summary: Authenticate user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  token:
+                    type: string
+        "401":
+          description: Invalid credentials
+
+  /api/tasks:
+    get:
+      summary: List tasks for authenticated user (FR-004, FR-005, FR-022)
+      description: |
+        Returns tasks filtered by status, sorted by updated_at DESC.
+        Used by frontend task view pages.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, pending, completed]
+            default: all
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  counts:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      pending:
+                        type: integer
+                      completed:
+                        type: integer
+        "401":
+          description: Unauthorized
+
+  /api/{user_id}/chat:
+    post:
+      summary: Send chat message to AI assistant (FR-006, FR-007)
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                conversation_id:
+                  type: integer
+                  nullable: true
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+      responses:
+        "200":
+          description: Chat response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "401":
+          description: Unauthorized
+        "503":
+          description: AI service unavailable
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 5000
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          description: "YYYY-MM-DD format (FR-020)"
+        due_time:
+          type: string
+          nullable: true
+          pattern: "^\\d{2}:\\d{2}$"
+          description: "HH:MM 24-hour format (FR-020)"
+        completed:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChatResponse:
+      type: object
+      properties:
+        conversation_id:
+          type: integer
+        response:
+          type: string
+        tool_calls:
+          type: array
+          items:
+            type: object
+            properties:
+              tool:
+                type: string
+              arguments:
+                type: object
+              success:
+                type: boolean
+              result:
+                type: object
+
+security:
+  - bearerAuth: []

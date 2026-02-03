@@ -1,0 +1,44 @@
+# Root values for Phase IV Todo App umbrella chart.
+# Override subchart values using <subchart-name>.<key> convention.
+
+backend:
+  replicaCount: 1
+  image:
+    repository: todo-backend
+    tag: latest
+    pullPolicy: Never  # Minikube local images
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    DATABASE_URL: ""          # Set via --set or values override
+    BETTER_AUTH_SECRET: ""    # Set via --set or values override
+    DEEPSEEK_API_KEY: ""      # Set via --set or values override
+    CORS_ORIGINS: "http://localhost:3000,http://frontend:3000"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: Never  # Minikube local images
+  service:
+    type: ClusterIP
+    port: 3000
+  env:
+    NEXT_PUBLIC_API_URL: "http://backend:8000"
+    BETTER_AUTH_SECRET: ""    # Set via --set or values override
+  resources:
+    limits:
+      cpu: 300m
+      memory: 384Mi
+    requests:
+      cpu: 100m
+      memory: 192Mi

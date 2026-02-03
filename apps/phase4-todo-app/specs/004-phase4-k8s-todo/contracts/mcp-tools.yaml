@@ -1,0 +1,137 @@
+# MCP Tool Schemas — Phase IV Todo AI Chatbot
+# These define the tool interfaces available to the AI agent via MCP server.
+# All tools are invoked by the agent runner; user_id is injected by the backend.
+
+tools:
+  add_task:
+    description: Create a new task for the authenticated user
+    parameters:
+      user_id:
+        type: string
+        required: true
+        description: Authenticated user ID (injected by backend)
+      title:
+        type: string
+        required: true
+        description: Task title (1-500 chars)
+      description:
+        type: string
+        required: false
+        description: Optional task description (0-5000 chars)
+      due_date:
+        type: string
+        required: false
+        format: date
+        description: "Optional due date in YYYY-MM-DD format (NEW in Phase IV)"
+      due_time:
+        type: string
+        required: false
+        pattern: "^\\d{2}:\\d{2}$"
+        description: "Optional due time in HH:MM 24-hour format (NEW in Phase IV)"
+    returns:
+      task_id: integer
+      status: "created"
+      title: string
+      due_date: string | null
+      due_time: string | null
+
+  list_tasks:
+    description: List tasks for the authenticated user with optional status filter
+    parameters:
+      user_id:
+        type: string
+        required: true
+        description: Authenticated user ID (injected by backend)
+      status:
+        type: string
+        required: false
+        enum: [all, pending, completed]
+        default: all
+        description: Filter by task completion status
+    returns:
+      type: array
+      items:
+        id: integer
+        title: string
+        description: string | null
+        due_date: string | null
+        due_time: string | null
+        completed: boolean
+        created_at: datetime
+        updated_at: datetime
+    sort_order: updated_at DESC
+
+  complete_task:
+    description: Mark a task as completed
+    parameters:
+      user_id:
+        type: string
+        required: true
+        description: Authenticated user ID (injected by backend)
+      task_id:
+        type: integer
+        required: true
+        description: ID of the task to complete
+    returns:
+      task_id: integer
+      status: "completed"
+      title: string
+    errors:
+      - task_not_found: "Task {task_id} not found for this user"
+
+  delete_task:
+    description: Delete a task permanently
+    parameters:
+      user_id:
+        type: string
+        required: true
+        description: Authenticated user ID (injected by backend)
+      task_id:
+        type: integer
+        required: true
+        description: ID of the task to delete
+    returns:
+      task_id: integer
+      status: "deleted"
+      title: string
+    errors:
+      - task_not_found: "Task {task_id} not found for this user"
+
+  update_task:
+    description: Update task fields (title, description, due_date, due_time)
+    parameters:
+      user_id:
+        type: string
+        required: true
+        description: Authenticated user ID (injected by backend)
+      task_id:
+        type: integer
+        required: true
+        description: ID of the task to update
+      title:
+        type: string
+        required: false
+        description: New title (1-500 chars)
+      description:
+        type: string
+        required: false
+        description: New description (0-5000 chars)
+      due_date:
+        type: string
+        required: false
+        format: date
+        description: "New due date in YYYY-MM-DD format (NEW in Phase IV)"
+      due_time:
+        type: string
+        required: false
+        pattern: "^\\d{2}:\\d{2}$"
+        description: "New due time in HH:MM 24-hour format (NEW in Phase IV)"
+    returns:
+      task_id: integer
+      status: "updated"
+      title: string
+      due_date: string | null
+      due_time: string | null
+    errors:
+      - task_not_found: "Task {task_id} not found for this user"
+      - no_fields: "At least one field must be provided to update"
