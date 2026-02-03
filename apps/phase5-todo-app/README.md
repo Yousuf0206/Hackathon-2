@@ -1,690 +1,447 @@
-# Phase II Full-Stack Todo Web Application
+# The Evolution of ToDo
 
-A secure, multi-user todo application built with FastAPI, Next.js, and PostgreSQL. Features JWT-based authentication, complete CRUD operations, and robust user data isolation.
+A hackathon project demonstrating how a simple todo app progressively evolves from a monolithic fullstack application into a fully event-driven, cloud-native distributed system.
 
-## 🌟 Features
+## The 4 Phases
 
-### Core Functionality
-- ✅ **User Authentication**: Secure registration and login with JWT tokens
-- ✅ **Create Todos**: Add tasks with title and optional description
-- ✅ **View Todos**: See all your personal todos in one place
-- ✅ **Edit Todos**: Update task titles and descriptions inline
-- ✅ **Toggle Completion**: Mark tasks as complete or incomplete
-- ✅ **Delete Todos**: Remove tasks with confirmation dialog
-- ✅ **User Isolation**: Each user can only access their own todos
+| Phase | Name | Architecture | What Changed |
+|-------|------|-------------|-------------|
+| **2** | Full-Stack Web App | Monolithic (2 services) | Next.js + FastAPI + PostgreSQL with JWT auth |
+| **3** | AI Chatbot | Monolithic + AI layer | Natural language task management via OpenAI Agents + MCP |
+| **4** | Cloud-Native K8s | Containerized on Kubernetes | Docker + Helm charts + date/time-aware tasks + task state pages |
+| **5** | Event-Driven Microservices | 5 distributed services | Kafka + Dapr + recurring tasks + reminders + audit trail + real-time sync |
 
-### Technical Features
-- 🔒 **Security**: JWT authentication, password hashing with bcrypt, user data isolation
-- 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
-- ⚡ **Real-time Updates**: Instant UI updates after any operation
-- 🎨 **Modern UI**: Clean, intuitive interface with loading states and error handling
-- 🔄 **Auto JWT Handling**: Automatic token attachment to all API requests
-- 🚨 **Comprehensive Error Handling**: User-friendly error messages throughout
+Each phase builds on top of the previous one. The current codebase is **Phase 5** — the most complete version containing all prior features.
 
-## 🏗️ Technology Stack
+---
 
-### Backend
-- **Framework**: FastAPI 0.104+
-- **ORM**: SQLModel 0.14+
-- **Database**: PostgreSQL (Neon Serverless)
-- **Authentication**: JWT with python-jose
-- **Password Hashing**: passlib with bcrypt
-- **Server**: Uvicorn
-
-### Frontend
-- **Framework**: Next.js 15+ with App Router
-- **Language**: TypeScript 5+
-- **Authentication**: Better Auth 1.0+
-- **Styling**: CSS-in-JS (styled-jsx)
-- **HTTP Client**: Fetch API with custom wrapper
-
-## 📁 Project Structure
+## Architecture Overview
 
 ```
-phase2-todo-app/
-├── backend/                    # FastAPI backend
-│   ├── src/
-│   │   ├── api/               # API endpoints
-│   │   │   ├── auth.py        # Authentication endpoints
-│   │   │   └── todos.py       # Todo CRUD endpoints
-│   │   ├── auth/              # Auth utilities
-│   │   │   ├── jwt.py         # JWT creation/verification
-│   │   │   ├── password.py    # Password hashing
-│   │   │   └── middleware.py  # JWT middleware
-│   │   ├── models/            # Database models
-│   │   │   ├── user.py        # User model
-│   │   │   └── todo.py        # Todo model
-│   │   ├── config.py          # Configuration
-│   │   ├── database.py        # Database connection
-│   │   ├── dependencies.py    # FastAPI dependencies
-│   │   └── main.py            # Application entry point
-│   ├── migrations/            # Alembic migrations
-│   ├── requirements.txt       # Python dependencies
-│   ├── .env.example          # Environment variables template
-│   └── CLAUDE.md             # Backend documentation
-│
-├── frontend/                  # Next.js frontend
-│   ├── src/
-│   │   ├── app/              # Next.js pages
-│   │   │   ├── login/        # Login page
-│   │   │   ├── register/     # Registration page
-│   │   │   ├── todos/        # Todo dashboard
-│   │   │   ├── layout.tsx    # Root layout
-│   │   │   └── page.tsx      # Landing page
-│   │   ├── components/       # React components
-│   │   │   ├── TodoForm.tsx      # Create todo form
-│   │   │   ├── TodoList.tsx      # Todo list display
-│   │   │   ├── TodoItem.tsx      # Individual todo item
-│   │   │   ├── TodoEditForm.tsx  # Edit todo form
-│   │   │   └── Navbar.tsx        # Navigation bar
-│   │   └── lib/              # Utilities
-│   │       ├── api.ts        # API client
-│   │       ├── auth.ts       # Auth helpers
-│   │       └── types.ts      # TypeScript types
-│   ├── package.json          # Node dependencies
-│   ├── .env.example         # Environment variables template
-│   └── CLAUDE.md            # Frontend documentation
-│
-├── specs/                    # Design documentation
-│   └── 002-phase2-fullstack-todo/
-│       ├── spec.md          # Feature specification
-│       ├── plan.md          # Implementation plan
-│       ├── data-model.md    # Database schema
-│       ├── tasks.md         # Task breakdown
-│       ├── research.md      # Technical research
-│       ├── quickstart.md    # Developer guide
-│       └── contracts/       # API contracts
-│
-└── README.md                # This file
+                         ┌──────────────────┐
+                         │    Frontend       │
+                         │    (Next.js)      │
+                         │  localhost:3002   │
+                         └────────┬─────────┘
+                                  │ REST API
+                         ┌────────▼─────────┐
+                         │    Chat API       │  ← only service that writes to DB
+                         │    (FastAPI)      │     and publishes events
+                         │  localhost:8000   │
+                         └────────┬─────────┘
+                                  │ CloudEvents via Dapr
+                      ┌───────────▼────────────┐
+                      │    Apache Kafka         │
+                      │  (via Dapr Pub/Sub)     │
+                      └───┬──────┬──────┬──────┘
+                          │      │      │
+              ┌───────────┤      │      ├───────────┐
+              │           │      │      │           │
+        ┌─────▼─────┐ ┌──▼──────▼─┐ ┌──▼────────┐ ┌▼───────────┐
+        │  Audit    │ │Notification│ │ Recurring │ │ WebSocket  │
+        │ Service   │ │  Service   │ │   Task    │ │  Service   │
+        │ Port 8003 │ │ Port 8001  │ │ Port 8002 │ │ Port 8004  │
+        └───────────┘ └────────────┘ └───────────┘ └────────────┘
+         Logs every     Schedules &    Auto-creates   Pushes live
+         event to DB    delivers       next task on    updates to
+         (immutable)    reminders      completion      browsers
 ```
 
-## 🎯 Integrated Dashboard
+The **Chat API** is the sole event producer. When a user creates, updates, completes, or deletes a task, it writes to the database and publishes a CloudEvent to Kafka through the Dapr sidecar. The four downstream services are pure consumers that react to events asynchronously.
 
-For the best development experience, use the **integrated dashboard** that combines both frontend and backend in one view:
+---
 
-```bash
-# Make sure both servers are running, then:
-start dashboard.html
-```
+## Services
 
-**Features:**
-- 📱 Frontend application in main view
-- 📚 API documentation accessible via tabs
-- 📊 System information sidebar
-- ❤️ Health monitoring
-- 🔗 Quick links to all services
-- ⚡ Seamless switching between views
+### Chat API — `services/chat-api/` (Port 8000)
 
-**Alternative:** Use `start.bat` to launch both servers and open the dashboard automatically.
+The main backend service. Handles authentication, task CRUD, AI chat, and event publishing.
 
-## 🚀 Quick Start
+**What it does:**
+- User registration and login (JWT via Better Auth)
+- Task create, read, update, complete, delete
+- AI-powered natural language task management (DeepSeek API + MCP tools)
+- Publishes CloudEvents on every task mutation
+
+**Key endpoints:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/register` | Create account |
+| POST | `/api/auth/login` | Sign in, get JWT |
+| GET | `/api/tasks` | List tasks (with counts) |
+| POST | `/api/tasks` | Create task → publishes `TaskCreated` |
+| PUT | `/api/tasks/{id}` | Update task → publishes `TaskUpdated` |
+| PATCH | `/api/tasks/{id}/complete` | Toggle done → publishes `TaskCompleted` |
+| DELETE | `/api/tasks/{id}` | Remove task → publishes `TaskDeleted` |
+| POST | `/api/chat` | AI chat (natural language task management) |
+| GET | `/health` | Health check |
+
+**Tech:** Python 3.11, FastAPI, SQLModel, PostgreSQL/SQLite
+
+---
+
+### Frontend — `frontend/` (Port 3002)
+
+Next.js 15 web application with App Router. Provides the user interface for managing tasks and chatting with the AI.
+
+**Pages:**
+
+| Route | Description |
+|-------|-------------|
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/todos` | All tasks dashboard |
+| `/todos/pending` | Pending tasks only |
+| `/todos/completed` | Completed tasks only |
+| `/todos/summary` | Task statistics (total, pending, completed) |
+| `/chat` | AI chat interface — manage tasks with natural language |
+
+**Tech:** Next.js 15, React 18, TypeScript 5, Better Auth
+
+---
+
+### Audit Service — `services/audit/` (Port 8003)
+
+Subscribes to **all three** Kafka topics. Stores every event as an immutable row in the `audit_entries` table. Events are never updated or deleted.
+
+**Use case:** Compliance, debugging, and full event history reconstruction.
+
+**Query endpoint:** `GET /audit?event_type=TaskCreated&user_id=123&page=1&page_size=50`
+
+---
+
+### Notification Service — `services/notification/` (Port 8001)
+
+Handles reminder scheduling and delivery using the Dapr Jobs API.
+
+**How it works:**
+1. When a task has a reminder, Chat API schedules a Dapr Job with a specific trigger time
+2. At the scheduled time, Dapr calls back to the Notification Service
+3. The service publishes `ReminderTriggered` → `ReminderDelivered` or `ReminderFailed` events
+4. When a task is deleted, it cancels any associated reminder job
+
+---
+
+### Recurring Task Service — `services/recurring-task/` (Port 8002)
+
+Listens for `TaskCompleted` events. If the completed task has a recurrence rule (daily, weekly, or monthly), it automatically creates the next task instance.
+
+**How it works:**
+1. Receives `TaskCompleted` event with `had_recurrence_rule=true`
+2. Looks up the recurrence rule via Dapr Service Invocation to Chat API
+3. Checks termination conditions (max occurrences, end date)
+4. Calculates the next due date
+5. Creates a new task via Service Invocation
+6. Publishes `RecurringTaskGenerated` event
+
+---
+
+### WebSocket Service — `services/websocket/` (Port 8004)
+
+Pushes real-time updates to connected browser clients over WebSocket connections.
+
+**How it works:**
+1. Consumes `task-events` and `reminder-events` from Kafka
+2. Looks up which users are connected
+3. Sends the event data as a WebSocket message
+4. Queues events for offline users and replays them on reconnect
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
-Ensure you have the following installed:
-- **Python** 3.11 or higher
-- **Node.js** 18 or higher
-- **PostgreSQL** 14 or higher (or Neon Serverless account)
-- **Git**
+- Docker and Docker Compose
 
-### 1. Clone the Repository
+### Run the App
 
 ```bash
-git clone <repository-url>
-cd phase2-todo-app
+docker compose up --build -d
 ```
 
-### 2. Set Up Environment Variables
+Once running:
+- **Frontend:** http://localhost:3002
+- **Backend API:** http://localhost:8000
+- **Health check:** http://localhost:8000/health
 
-#### Backend Environment
-
-Create `backend/.env`:
+### Verify
 
 ```bash
-cd backend
-cp .env.example .env
+# Check both services are healthy
+docker compose ps
+
+# Test backend
+curl http://localhost:8000/health
+# → {"status":"healthy","service":"chat-api","version":"5.0.0"}
 ```
 
-Edit `backend/.env` and add:
+### Stop
+
+```bash
+docker compose down
+```
+
+### Environment Variables
+
+The app runs with sensible defaults. To customize, create `services/chat-api/.env`:
 
 ```env
-# Generate with: openssl rand -base64 32
-BETTER_AUTH_SECRET=your-secret-key-here
-
-# PostgreSQL connection string
-DATABASE_URL=postgresql://user:password@host:port/database
-
-# CORS origins (comma-separated)
-CORS_ORIGINS=http://localhost:3000
-```
-
-#### Frontend Environment
-
-Create `frontend/.env.local`:
-
-```bash
-cd ../frontend
-cp .env.example .env.local
-```
-
-Edit `frontend/.env.local` and add:
-
-```env
-# Backend API URL
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Same secret as backend!
-BETTER_AUTH_SECRET=your-secret-key-here
-```
-
-> **Important**: The `BETTER_AUTH_SECRET` must be identical in both files!
-
-#### Generate Shared Secret
-
-```bash
-# On Linux/Mac:
-openssl rand -base64 32
-
-# On Windows (PowerShell):
-[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
-```
-
-### 3. Set Up Backend
-
-```bash
-cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Initialize database migrations
-alembic upgrade head
-
-# Start the backend server
-uvicorn src.main:app --reload
-```
-
-The backend will be running at http://localhost:8000
-
-**Verify backend is running:**
-- Health check: http://localhost:8000/health
-- API documentation: http://localhost:8000/docs
-
-### 4. Set Up Frontend
-
-Open a **new terminal** window:
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-```
-
-The frontend will be running at http://localhost:3000
-
-### 5. Access the Application
-
-#### Option A: Integrated Dashboard (Recommended) 🎯
-
-Simply open `dashboard.html` in your browser for a unified view with both frontend and backend:
-
-```bash
-# Open the integrated dashboard
-start dashboard.html
-```
-
-The dashboard provides:
-- **Frontend Application** in the main view
-- **API Documentation** accessible via tabs
-- **System Information** sidebar with quick links
-- **Health monitoring** for both services
-
-#### Option B: Individual Access
-
-1. **Frontend**: Open http://localhost:3000
-2. **Backend API**: Open http://localhost:8000/docs
-3. **Health Check**: http://localhost:8000/health
-
-#### Quick Start:
-
-1. Click "Sign Up" to create a new account
-2. Enter your email and password (min 8 characters)
-3. You'll be automatically logged in and redirected to the todo dashboard
-4. Start creating todos!
-
-## 📖 Usage Guide
-
-### Creating Todos
-
-1. Navigate to the todo dashboard at http://localhost:3000/todos
-2. Enter a title (required, max 500 characters)
-3. Optionally add a description (max 5000 characters)
-4. Click "Add Todo"
-
-### Managing Todos
-
-- **Mark as Complete**: Click the checkbox next to any todo
-- **Edit Todo**: Click the "Edit" button, modify title/description, then "Save"
-- **Delete Todo**: Click the "Delete" button and confirm the action
-- **View Details**: See creation and update timestamps for each todo
-
-### User Isolation
-
-- Each user can only see and manage their own todos
-- Attempting to access another user's todo returns a 404 error (not 403) to prevent user enumeration
-- All data queries are automatically filtered by user_id from the JWT token
-
-## 🔒 Security Features
-
-### Authentication
-- Passwords are hashed with bcrypt before storage
-- JWT tokens issued on login with 24-hour expiration
-- Tokens include user_id in the `sub` (subject) claim
-- Automatic token validation on every API request
-
-### Authorization
-- User identity extracted exclusively from JWT `sub` claim
-- Never reads user_id from URL parameters or request body
-- All database queries filtered by authenticated user_id
-- Ownership violations return 404 to prevent enumeration attacks
-
-### Data Protection
-- PostgreSQL foreign key constraints ensure referential integrity
-- ON DELETE CASCADE removes todos when user is deleted
-- Input validation on all endpoints (title length, description length, etc.)
-- CORS configured to only allow requests from frontend origin
-
-## 🧪 API Documentation
-
-### Authentication Endpoints
-
-#### Register User
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
-
-Response: 201 Created
-{
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "created_at": "2026-01-01T00:00:00Z"
-  },
-  "token": "jwt_token_string"
-}
-```
-
-#### Login
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
-
-Response: 200 OK
-{
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com"
-  },
-  "token": "jwt_token_string"
-}
-```
-
-### Todo Endpoints
-
-All todo endpoints require authentication via `Authorization: Bearer <token>` header.
-
-#### List Todos
-```http
-GET /api/todos
-Authorization: Bearer <token>
-
-Response: 200 OK
-{
-  "todos": [
-    {
-      "id": "uuid",
-      "user_id": "uuid",
-      "title": "Buy groceries",
-      "description": "Milk, eggs, bread",
-      "completed": false,
-      "created_at": "2026-01-01T00:00:00Z",
-      "updated_at": "2026-01-01T00:00:00Z"
-    }
-  ]
-}
-```
-
-#### Create Todo
-```http
-POST /api/todos
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Buy groceries",
-  "description": "Milk, eggs, bread"
-}
-
-Response: 201 Created
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "title": "Buy groceries",
-  "description": "Milk, eggs, bread",
-  "completed": false,
-  "created_at": "2026-01-01T00:00:00Z",
-  "updated_at": "2026-01-01T00:00:00Z"
-}
-```
-
-#### Update Todo
-```http
-PUT /api/todos/{todo_id}
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Buy groceries and cook",
-  "description": "Updated description"
-}
-
-Response: 200 OK
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "title": "Buy groceries and cook",
-  "description": "Updated description",
-  "completed": false,
-  "created_at": "2026-01-01T00:00:00Z",
-  "updated_at": "2026-01-01T10:30:00Z"
-}
-```
-
-#### Toggle Completion
-```http
-PATCH /api/todos/{todo_id}/complete
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "completed": true
-}
-
-Response: 200 OK
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "title": "Buy groceries",
-  "description": "Milk, eggs, bread",
-  "completed": true,
-  "created_at": "2026-01-01T00:00:00Z",
-  "updated_at": "2026-01-01T11:00:00Z"
-}
-```
-
-#### Delete Todo
-```http
-DELETE /api/todos/{todo_id}
-Authorization: Bearer <token>
-
-Response: 204 No Content
-```
-
-See complete API documentation at http://localhost:8000/docs (Swagger UI)
-
-## 🐛 Troubleshooting
-
-### Backend Won't Start
-
-**Error**: `ModuleNotFoundError: No module named 'fastapi'`
-
-**Solution**:
-```bash
-cd backend
-pip install -r requirements.txt
+DATABASE_URL=sqlite:///./todo_app.db
+BETTER_AUTH_SECRET=supersecretkeyfordevelopment
+DEEPSEEK_API_KEY=your-api-key-here   # optional, enables AI chat
 ```
 
 ---
 
-**Error**: `sqlalchemy.exc.OperationalError: could not connect to server`
+## Kubernetes Deployment
 
-**Solution**:
-- Verify `DATABASE_URL` in `backend/.env` is correct
-- Check PostgreSQL is running
-- Test connection: `psql <DATABASE_URL>`
+### Local (Minikube)
+
+```bash
+minikube start --driver=docker
+
+# Install Dapr runtime
+dapr init -k --wait
+
+# Build all images in Minikube's Docker daemon
+eval $(minikube docker-env)
+docker build -t todo-chat-api:latest services/chat-api/
+docker build -t todo-frontend:latest frontend/
+docker build -t todo-notification:latest services/notification/
+docker build -t todo-recurring-task:latest services/recurring-task/
+docker build -t todo-audit:latest services/audit/
+docker build -t todo-websocket:latest services/websocket/
+
+# Apply Dapr components and subscriptions
+kubectl apply -f dapr/components/
+kubectl apply -f dapr/components/subscriptions/
+
+# Deploy everything with Helm
+helm dependency update helm/todo-app
+helm install todo-app helm/todo-app -f helm/todo-app/values-local.yaml
+```
+
+### Cloud (Managed Kubernetes)
+
+```bash
+# Point kubectl at your cluster, then:
+helm upgrade --install todo-app helm/todo-app \
+  -f helm/todo-app/values-cloud.yaml \
+  --set chat-api.image.tag=<git-sha> \
+  --set frontend.image.tag=<git-sha> \
+  --set notification.image.tag=<git-sha> \
+  --set recurring-task.image.tag=<git-sha> \
+  --set audit.image.tag=<git-sha> \
+  --set websocket.image.tag=<git-sha>
+```
+
+Cloud values enable multiple replicas, persistent storage (Kafka 10Gi, Redis 2Gi), and image pulls from ghcr.io.
 
 ---
 
-**Error**: `ValueError: DATABASE_URL environment variable is required`
+## Event-Driven Architecture
 
-**Solution**:
-- Ensure `backend/.env` file exists
-- Check `DATABASE_URL` is set in the file
+### Kafka Topics and Events
 
-### Frontend Won't Start
+| Topic | Events | Who Consumes |
+|-------|--------|-------------|
+| `task-events` | TaskCreated, TaskUpdated, TaskCompleted, TaskDeleted | Audit, WebSocket, Recurring Task |
+| `reminder-events` | ReminderScheduled, ReminderTriggered, ReminderDelivered, ReminderFailed | Audit, WebSocket, Notification |
+| `recurring-events` | RecurringTaskGenerated | Audit |
 
-**Error**: `Error: Cannot find module 'next'`
+### Event Flow Example
 
-**Solution**:
-```bash
-cd frontend
-npm install
+When a user completes a recurring task:
+
+```
+1. User clicks "Complete" on a daily task
+2. Chat API:
+   - Updates task in PostgreSQL (completed=true)
+   - Publishes TaskCompleted event to Kafka
+3. Kafka delivers the event to three consumers:
+   a. Audit Service     → logs the event (immutable record)
+   b. WebSocket Service → pushes update to the user's browser
+   c. Recurring Task Service:
+      - Sees had_recurrence_rule=true
+      - Looks up the daily recurrence rule
+      - Calculates tomorrow's date
+      - Creates a new task via Chat API
+      - Publishes RecurringTaskGenerated event
+4. The new task appears in the user's browser via WebSocket
+```
+
+### Exactly-Once Delivery
+
+Every consumer checks Redis (via Dapr State Store) before processing:
+
+```
+Key:   idempotency:{service-name}:{event-id}
+TTL:   24 hours
+```
+
+If the key exists, the event is a duplicate and gets dropped. Otherwise, the event is processed and the key is written. This prevents duplicate processing on retries or redelivery.
+
+### Dapr Abstraction
+
+No service talks to Kafka or Redis directly. All communication goes through the Dapr sidecar on `localhost:3500`:
+
+| Operation | Dapr API |
+|-----------|----------|
+| Publish event | `POST /v1.0/publish/todo-pubsub/{topic}` |
+| Read/write state | `GET/POST /v1.0/state/todo-statestore/{key}` |
+| Schedule reminder | `POST /v1.0-alpha1/jobs/{name}` |
+| Call another service | `GET /v1.0/invoke/{service}/method/{path}` |
+
+Swapping Kafka for RabbitMQ or Redis for Cosmos DB requires only changing the Dapr component YAML files — zero code changes in any service.
+
+---
+
+## CI/CD Pipeline
+
+Three GitHub Actions workflows handle the full lifecycle:
+
+```
+build.yml (automatic) → deploy-local.yml (manual) → deploy-cloud.yml (manual)
+```
+
+**Build** — Triggered on push/PR to main:
+1. Builds all 6 Docker images in parallel (matrix strategy)
+2. Pushes to GitHub Container Registry (ghcr.io) tagged by git SHA
+3. Packages the Helm chart as an artifact
+
+**Deploy Local** — Manual trigger:
+1. Starts Minikube with Dapr
+2. Builds images locally
+3. Deploys via Helm with `values-local.yaml`
+4. Runs smoke tests (health checks on all services)
+
+**Deploy Cloud** — Manual trigger with environment protection:
+1. Configures kubectl via secrets
+2. Deploys the same images (by SHA) to managed Kubernetes
+3. Uses `values-cloud.yaml` (multiple replicas, persistent storage)
+
+The same Docker images flow through all environments without rebuilding, ensuring what you test locally is what runs in production.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15, React 18, TypeScript 5 |
+| Backend Services | Python 3.11, FastAPI, SQLModel |
+| Database | PostgreSQL (production) / SQLite (local dev) |
+| Authentication | Better Auth + JWT |
+| AI | DeepSeek API via OpenAI SDK + MCP tools |
+| Event Streaming | Apache Kafka via Dapr Pub/Sub |
+| State Management | Redis via Dapr State Store |
+| Job Scheduling | Dapr Jobs API |
+| Containers | Docker (multi-stage builds) |
+| Orchestration | Kubernetes + Helm 3 |
+| CI/CD | GitHub Actions |
+
+---
+
+## Project Structure
+
+```
+phase5-todo-app/
+├── frontend/                     # Next.js 15 web application
+│   ├── src/
+│   │   ├── app/                 # Pages: login, register, todos, chat
+│   │   ├── components/          # React components
+│   │   └── library/             # API client, WebSocket client
+│   └── Dockerfile
+│
+├── services/
+│   ├── chat-api/                # Main API + event publisher
+│   │   ├── src/
+│   │   │   ├── api/            # REST endpoints (auth, tasks, todos, chat)
+│   │   │   ├── events/         # CloudEvents schemas, publisher, idempotency
+│   │   │   ├── models/         # Task, Reminder, RecurrenceRule, User, Todo
+│   │   │   ├── agent/          # AI agent logic
+│   │   │   └── mcp/            # MCP tool definitions
+│   │   └── Dockerfile
+│   ├── audit/                   # Immutable event log
+│   ├── notification/            # Reminder scheduling and delivery
+│   ├── recurring-task/          # Recurring task generation
+│   └── websocket/               # Real-time push to browsers
+│
+├── dapr/
+│   └── components/
+│       ├── pubsub.yaml          # Kafka configuration
+│       ├── statestore.yaml      # Redis configuration
+│       ├── secrets.yaml         # Kubernetes secrets
+│       └── subscriptions/       # Topic-to-service routing
+│
+├── helm/
+│   └── todo-app/                # Umbrella Helm chart
+│       ├── charts/             # Subcharts (one per service + Kafka + Redis)
+│       ├── values.yaml         # Default values
+│       ├── values-local.yaml   # Minikube overrides
+│       └── values-cloud.yaml   # Production overrides
+│
+├── .github/
+│   └── workflows/
+│       ├── build.yml           # Build images + package Helm chart
+│       ├── deploy-local.yml    # Deploy to Minikube
+│       └── deploy-cloud.yml    # Deploy to managed K8s
+│
+├── specs/                       # Design specs for each phase
+│   ├── 002-phase2-fullstack-todo/
+│   ├── 003-phase3-ai-chatbot/
+│   ├── 004-phase4-k8s-todo/
+│   └── 005-phase5-event-driven/
+│
+├── docker-compose.yml           # Local dev: frontend + chat-api
+└── README.md
 ```
 
 ---
 
-**Error**: `Error: NEXT_PUBLIC_API_URL is not defined`
+## Phase-by-Phase Evolution
 
-**Solution**:
-- Create `frontend/.env.local` from `.env.example`
-- Restart Next.js: `npm run dev`
+### Phase 2: Full-Stack Web App
 
-### Authentication Issues
+Built the foundation — a multi-user todo app with secure authentication.
 
-**Error**: `401 Unauthorized: Invalid or missing token`
+- **Frontend:** Next.js with login, registration, and todo dashboard pages
+- **Backend:** FastAPI with JWT auth, CRUD endpoints, user data isolation
+- **Database:** PostgreSQL with SQLModel ORM
+- **Security:** Passwords hashed with bcrypt, JWT tokens with 24h expiry, user identity from JWT only (never from URL params)
 
-**Possible Causes**:
+### Phase 3: AI Chatbot
 
-1. **Secret Mismatch**: `BETTER_AUTH_SECRET` differs between frontend and backend
-   - **Solution**: Ensure both `.env` files have the exact same secret
+Added a natural language interface so users can manage tasks by chatting.
 
-2. **Token Expired**: JWT tokens expire after 24 hours
-   - **Solution**: Logout and login again
+- **AI Agent:** OpenAI Agents SDK maps user intent to MCP tools
+- **MCP Tools:** `add_task`, `list_tasks`, `complete_task`, `delete_task`, `update_task` — the agent cannot bypass these
+- **Chat UI:** Integrated chat panel on the frontend
+- **Stateless:** Conversation history stored in PostgreSQL, reconstructed per request
 
-3. **Backend Not Running**: Frontend can't reach backend API
-   - **Solution**: Check `http://localhost:8000/health` is accessible
+Example: *"Add buy groceries for tomorrow"* → agent calls `add_task(title="Buy groceries", due_date="2026-02-04")`
 
-### CORS Errors
+### Phase 4: Cloud-Native on Kubernetes
 
-**Error**: `Access to fetch at 'http://localhost:8000' has been blocked by CORS policy`
+Containerized the app and deployed it to Kubernetes using Helm.
 
-**Solution**:
-- Verify `CORS_ORIGINS` in `backend/.env` includes `http://localhost:3000`
-- Check backend CORS middleware in `src/main.py`
-- Restart backend server
+- **Docker:** Multi-stage builds for minimal production images
+- **Helm:** Umbrella chart with frontend and backend subcharts — single `helm install` deploys everything
+- **Date/Time Tasks:** Extended Task model with optional `due_date` and `due_time` fields
+- **Task Pages:** 4 views — All Tasks, Pending, Completed, Summary
+- **Health Probes:** Liveness and readiness checks on `/health`
 
-### Database Migration Issues
+### Phase 5: Event-Driven Microservices
 
-**Error**: `alembic.util.exc.CommandError: Can't locate revision`
+Split into 5 services communicating through Kafka events, abstracted by Dapr.
 
-**Solution**:
-```bash
-cd backend
-
-# Option 1: Run migrations
-alembic upgrade head
-
-# Option 2: Create initial migration (first time only)
-alembic revision --autogenerate -m "Initial schema"
-alembic upgrade head
-```
-
-### Port Already in Use
-
-**Error**: `OSError: [Errno 48] Address already in use: 8000`
-
-**Solution**:
-```bash
-# Find process using port 8000
-lsof -i :8000  # Mac/Linux
-netstat -ano | findstr :8000  # Windows
-
-# Kill the process
-kill -9 <PID>  # Mac/Linux
-taskkill /PID <PID> /F  # Windows
-
-# OR use a different port
-uvicorn src.main:app --reload --port 8001
-# Then update frontend NEXT_PUBLIC_API_URL to http://localhost:8001
-```
-
-## 🧪 Testing
-
-### Manual Testing Checklist
-
-1. **Registration**
-   - [ ] Can register with valid email and password
-   - [ ] Cannot register with duplicate email (409 error)
-   - [ ] Cannot register with invalid email format (400 error)
-   - [ ] Cannot register with password < 8 chars (400 error)
-
-2. **Login**
-   - [ ] Can login with correct credentials
-   - [ ] Cannot login with wrong password (401 error)
-   - [ ] Cannot login with non-existent email (401 error)
-   - [ ] Automatically redirected to /todos after login
-
-3. **Create Todos**
-   - [ ] Can create todo with title only
-   - [ ] Can create todo with title and description
-   - [ ] Cannot create todo with empty title (400 error)
-   - [ ] Character counts update as typing
-   - [ ] Form clears after successful creation
-
-4. **View Todos**
-   - [ ] See all personal todos on dashboard
-   - [ ] Todos sorted by newest first
-   - [ ] Empty state shows when no todos
-   - [ ] Loading state shows while fetching
-
-5. **Toggle Completion**
-   - [ ] Can mark todo as complete (checkbox checked, strikethrough)
-   - [ ] Can mark todo as incomplete (checkbox unchecked, no strikethrough)
-   - [ ] Completion persists after page refresh
-
-6. **Edit Todos**
-   - [ ] Click "Edit" shows edit form inline
-   - [ ] Can update title and description
-   - [ ] "Cancel" button reverts to original values
-   - [ ] Cannot save with empty title
-   - [ ] Changes persist after page refresh
-
-7. **Delete Todos**
-   - [ ] Confirmation dialog appears before deletion
-   - [ ] "Cancel" keeps the todo
-   - [ ] "OK" removes the todo permanently
-   - [ ] Todo disappears from list immediately
-
-8. **User Isolation**
-   - [ ] Create 2 different user accounts
-   - [ ] User A cannot see User B's todos
-   - [ ] Attempting to access another user's todo via API returns 404
-
-9. **Session Management**
-   - [ ] Logout button clears session and redirects to /login
-   - [ ] Cannot access /todos without being logged in
-   - [ ] Token expiration redirects to /login
-
-### Running Automated Tests
-
-```bash
-# Backend tests (when implemented)
-cd backend
-pytest tests/
-
-# Frontend tests (when implemented)
-cd frontend
-npm test
-```
-
-## 📚 Additional Documentation
-
-- **Feature Specification**: `specs/002-phase2-fullstack-todo/spec.md`
-- **Implementation Plan**: `specs/002-phase2-fullstack-todo/plan.md`
-- **Data Model**: `specs/002-phase2-fullstack-todo/data-model.md`
-- **API Contracts**: `specs/002-phase2-fullstack-todo/contracts/`
-- **Developer Quickstart**: `specs/002-phase2-fullstack-todo/quickstart.md`
-- **Backend Guide**: `backend/CLAUDE.md`
-- **Frontend Guide**: `frontend/CLAUDE.md`
-
-## 🎯 Future Enhancements
-
-Potential features for future versions:
-
-- [ ] Pagination for todo lists (when > 50 todos)
-- [ ] Filter todos by completion status
-- [ ] Search todos by title/description
-- [ ] Todo categories/tags
-- [ ] Due dates and reminders
-- [ ] Priority levels (high/medium/low)
-- [ ] Rich text editor for descriptions
-- [ ] File attachments
-- [ ] Shared todos between users
-- [ ] Email notifications
-- [ ] Dark mode theme
-- [ ] Export todos (CSV, JSON)
-- [ ] Undo/redo functionality
-- [ ] Keyboard shortcuts
-- [ ] PWA support for offline access
-
-## 🤝 Contributing
-
-This project follows the **Agentic Dev Stack** workflow:
-
-1. Update feature specification in `specs/`
-2. Run `/sp.plan` to update implementation plan
-3. Run `/sp.tasks` to generate task breakdown
-4. Run `/sp.implement` to execute tasks
-5. Commit changes with descriptive messages
-6. Create pull requests for review
-
-## 📝 License
-
-[Add your license here]
-
-## 💬 Support
-
-For issues, questions, or contributions:
-- Check the troubleshooting section above
-- Review the documentation in `specs/`
-- Check backend logs in Terminal 1
-- Check frontend console in browser DevTools
-
-## 🙏 Acknowledgments
-
-Built with:
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [Next.js](https://nextjs.org/) - React framework for production
-- [SQLModel](https://sqlmodel.tiangolo.com/) - SQL databases with Python type annotations
-- [Better Auth](https://www.better-auth.com/) - Authentication for web applications
-- [PostgreSQL](https://www.postgresql.org/) - Advanced open source database
-
----
-
-**Version**: 1.0.0
-**Last Updated**: 2026-01-01
-**Status**: ✅ Production Ready
+- **5 Services:** Chat API, Audit, Notification, Recurring Task, WebSocket
+- **Kafka:** 3 topics (task-events, reminder-events, recurring-events)
+- **Dapr:** Pub/Sub, State Store, Jobs API, Service Invocation, Secrets
+- **Recurring Tasks:** Complete a daily task → next instance auto-created
+- **Reminders:** Scheduled via Dapr Jobs, delivered via WebSocket
+- **Audit Trail:** Every event logged immutably
+- **Real-Time:** WebSocket push to connected clients within 2 seconds
+- **CI/CD:** GitHub Actions for automated build, test, and deploy
