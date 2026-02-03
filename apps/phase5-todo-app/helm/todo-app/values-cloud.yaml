@@ -1,0 +1,61 @@
+# Cloud (Managed K8s) environment values
+# Registry images, multiple replicas for critical services, persistence enabled
+
+chat-api:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/todo-app/todo-chat-api
+    tag: latest
+    pullPolicy: Always
+
+frontend:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/todo-app/todo-frontend
+    tag: latest
+    pullPolicy: Always
+
+notification:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/todo-app/todo-notification
+    tag: latest
+    pullPolicy: Always
+
+recurring-task:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/todo-app/todo-recurring-task
+    tag: latest
+    pullPolicy: Always
+
+audit:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/todo-app/todo-audit
+    tag: latest
+    pullPolicy: Always
+
+websocket:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/todo-app/todo-websocket
+    tag: latest
+    pullPolicy: Always
+
+kafka:
+  enabled: true
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 10Gi
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi

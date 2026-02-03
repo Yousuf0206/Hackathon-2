@@ -1,0 +1,59 @@
+# Local (Minikube) environment values
+# Single replicas, local images, no persistence
+
+chat-api:
+  replicaCount: 1
+  image:
+    repository: todo-chat-api
+    tag: latest
+    pullPolicy: Never
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: Never
+
+notification:
+  replicaCount: 1
+  image:
+    repository: todo-notification
+    tag: latest
+    pullPolicy: Never
+
+recurring-task:
+  replicaCount: 1
+  image:
+    repository: todo-recurring-task
+    tag: latest
+    pullPolicy: Never
+
+audit:
+  replicaCount: 1
+  image:
+    repository: todo-audit
+    tag: latest
+    pullPolicy: Never
+
+websocket:
+  replicaCount: 1
+  image:
+    repository: todo-websocket
+    tag: latest
+    pullPolicy: Never
+
+kafka:
+  enabled: true
+  replicaCount: 1
+  persistence:
+    enabled: false
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false

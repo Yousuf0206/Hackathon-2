@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: todo-audit
+  tag: latest
+  pullPolicy: Never
+
+service:
+  type: ClusterIP
+  port: 8003
+
+env:
+  DATABASE_URL: ""
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi

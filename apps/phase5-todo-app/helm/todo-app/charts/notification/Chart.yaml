@@ -1,0 +1,6 @@
+apiVersion: v2
+name: notification
+description: Phase V Notification Service - Reminder scheduling and delivery
+type: application
+version: 0.1.0
+appVersion: "5.0.0"

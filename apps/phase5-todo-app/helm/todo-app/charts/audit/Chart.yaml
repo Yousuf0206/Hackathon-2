@@ -1,0 +1,6 @@
+apiVersion: v2
+name: audit
+description: Phase V Audit Service - Immutable event logging
+type: application
+version: 0.1.0
+appVersion: "5.0.0"
