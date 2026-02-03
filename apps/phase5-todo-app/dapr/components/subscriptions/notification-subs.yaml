@@ -1,0 +1,23 @@
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: notification-reminder-events-sub
+spec:
+  topic: reminder-events
+  routes:
+    default: /events/reminder-events
+  pubsubname: todo-pubsub
+scopes:
+  - notification-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: notification-task-events-sub
+spec:
+  topic: task-events
+  routes:
+    default: /events/task-events
+  pubsubname: todo-pubsub
+scopes:
+  - notification-service

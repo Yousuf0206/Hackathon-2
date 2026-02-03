@@ -1,0 +1,6 @@
+apiVersion: v2
+name: recurring-task
+description: Phase V Recurring Task Service - Automatic recurring task generation
+type: application
+version: 0.1.0
+appVersion: "5.0.0"

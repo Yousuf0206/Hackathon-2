@@ -1,0 +1,68 @@
+name: Deploy to Cloud (Managed K8s)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag (SHA) to deploy"
+        required: true
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  deploy-cloud:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.13.0
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Verify Dapr is installed
+        run: dapr status -k || echo "Dapr not installed - install with: dapr init -k"
+
+      - name: Apply Dapr components
+        run: kubectl apply -f dapr/components/
+
+      - name: Apply Dapr subscriptions
+        run: kubectl apply -f dapr/components/subscriptions/
+
+      - name: Deploy with Helm
+        run: |
+          helm dependency update helm/todo-app
+          helm upgrade --install todo-app helm/todo-app \
+            -f helm/todo-app/values-cloud.yaml \
+            --set chat-api.image.tag=${{ inputs.image_tag }} \
+            --set notification.image.tag=${{ inputs.image_tag }} \
+            --set recurring-task.image.tag=${{ inputs.image_tag }} \
+            --set audit.image.tag=${{ inputs.image_tag }} \
+            --set websocket.image.tag=${{ inputs.image_tag }} \
+            --set frontend.image.tag=${{ inputs.image_tag }} \
+            --wait --timeout 5m
+
+      - name: Smoke test - Health checks
+        run: |
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=chat-api --timeout=120s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=audit --timeout=120s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=notification --timeout=120s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=recurring-task --timeout=120s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=websocket --timeout=120s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=frontend --timeout=120s

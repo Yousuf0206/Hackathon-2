@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: todo-chat-api
+  tag: latest
+  pullPolicy: Never
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  DATABASE_URL: ""
+  BETTER_AUTH_SECRET: ""
+  DEEPSEEK_API_KEY: ""
+  CORS_ORIGINS: "http://localhost:3000"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

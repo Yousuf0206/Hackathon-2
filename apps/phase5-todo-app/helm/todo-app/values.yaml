@@ -1,0 +1,147 @@
+# Root values for Phase V Todo App umbrella chart.
+# Override subchart values using <subchart-name>.<key> convention.
+
+# --- Global Dapr Configuration ---
+global:
+  dapr:
+    enabled: true
+
+# --- Chat API (formerly backend) ---
+chat-api:
+  replicaCount: 1
+  image:
+    repository: todo-chat-api
+    tag: latest
+    pullPolicy: Never  # Minikube local images
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    DATABASE_URL: ""          # Set via --set or values override
+    BETTER_AUTH_SECRET: ""    # Set via --set or values override
+    DEEPSEEK_API_KEY: ""      # Set via --set or values override
+    CORS_ORIGINS: "http://localhost:3000,http://frontend:3000"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# --- Frontend ---
+frontend:
+  replicaCount: 1
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: Never
+  service:
+    type: ClusterIP
+    port: 3000
+  env:
+    NEXT_PUBLIC_API_URL: "http://chat-api:8000"
+    BETTER_AUTH_SECRET: ""
+  resources:
+    limits:
+      cpu: 300m
+      memory: 384Mi
+    requests:
+      cpu: 100m
+      memory: 192Mi
+
+# --- Notification Service ---
+notification:
+  replicaCount: 1
+  image:
+    repository: todo-notification
+    tag: latest
+    pullPolicy: Never
+  service:
+    type: ClusterIP
+    port: 8001
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# --- Recurring Task Service ---
+recurring-task:
+  replicaCount: 1
+  image:
+    repository: todo-recurring-task
+    tag: latest
+    pullPolicy: Never
+  service:
+    type: ClusterIP
+    port: 8002
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# --- Audit Service ---
+audit:
+  replicaCount: 1
+  image:
+    repository: todo-audit
+    tag: latest
+    pullPolicy: Never
+  service:
+    type: ClusterIP
+    port: 8003
+  env:
+    DATABASE_URL: ""
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# --- WebSocket Service ---
+websocket:
+  replicaCount: 1
+  image:
+    repository: todo-websocket
+    tag: latest
+    pullPolicy: Never
+  service:
+    type: ClusterIP
+    port: 8004
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# --- Kafka (Bitnami) ---
+kafka:
+  enabled: true
+  replicaCount: 1
+  persistence:
+    enabled: false
+  zookeeper:
+    enabled: true
+    replicaCount: 1
+    persistence:
+      enabled: false
+
+# --- Redis (Bitnami) ---
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false
