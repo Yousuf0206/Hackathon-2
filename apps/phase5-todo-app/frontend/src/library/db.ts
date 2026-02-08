@@ -8,10 +8,24 @@ import { neon } from '@neondatabase/serverless';
 // Types
 export interface User {
   id: string;
-  email: string;
+  login_name: string;
+  name: string;
+  father_name: string;
+  email: string | null;
+  phone: string | null;
+  biodata: string | null;
   password_hash: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface PasswordResetToken {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  used: boolean;
+  created_at: string;
 }
 
 export interface Todo {
@@ -36,6 +50,7 @@ const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
 interface InMemoryDatabase {
   users: User[];
   todos: Todo[];
+  password_reset_tokens: PasswordResetToken[];
 }
 
 const globalForDb = globalThis as unknown as {
@@ -44,7 +59,7 @@ const globalForDb = globalThis as unknown as {
 
 function getInMemoryDb(): InMemoryDatabase {
   if (!globalForDb.inMemoryDb) {
-    globalForDb.inMemoryDb = { users: [], todos: [] };
+    globalForDb.inMemoryDb = { users: [], todos: [], password_reset_tokens: [] };
   }
   return globalForDb.inMemoryDb;
 }
@@ -72,10 +87,42 @@ export async function initDatabase(): Promise<void> {
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR(255) UNIQUE NOT NULL,
+        login_name VARCHAR(30) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL DEFAULT '',
+        father_name VARCHAR(255) NOT NULL DEFAULT '',
+        email VARCHAR(255) UNIQUE,
+        phone VARCHAR(20),
+        biodata TEXT,
         password_hash TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Migrate existing users table: add new columns if missing
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_name VARCHAR(30) UNIQUE`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS father_name VARCHAR(255) NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS biodata TEXT`;
+      // Backfill login_name from email for existing users
+      await sql`UPDATE users SET login_name = email WHERE login_name IS NULL`;
+      // Make email nullable (drop NOT NULL if it exists)
+      await sql`ALTER TABLE users ALTER COLUMN email DROP NOT NULL`;
+    } catch {
+      // Columns may already exist
+    }
+
+    // Create password_reset_tokens table
+    await sql`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(64) UNIQUE NOT NULL,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `;
 
@@ -110,11 +157,11 @@ export async function initDatabase(): Promise<void> {
 export async function findUserByEmail(email: string): Promise<User | null> {
   if (!sql) {
     const db = getInMemoryDb();
-    return db.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+    return db.users.find(u => u.email?.toLowerCase() === email.toLowerCase()) || null;
   }
 
   const result = await sql`
-    SELECT id, email, password_hash, created_at, updated_at
+    SELECT id, login_name, name, father_name, email, phone, biodata, password_hash, created_at, updated_at
     FROM users
     WHERE LOWER(email) = LOWER(${email})
     LIMIT 1
@@ -125,7 +172,12 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   const row = result[0];
   return {
     id: row.id,
+    login_name: row.login_name,
+    name: row.name,
+    father_name: row.father_name,
     email: row.email,
+    phone: row.phone,
+    biodata: row.biodata,
     password_hash: row.password_hash,
     created_at: row.created_at?.toISOString?.() || row.created_at,
     updated_at: row.updated_at?.toISOString?.() || row.updated_at,
@@ -139,7 +191,7 @@ export async function findUserById(id: string): Promise<User | null> {
   }
 
   const result = await sql`
-    SELECT id, email, password_hash, created_at, updated_at
+    SELECT id, login_name, name, father_name, email, phone, biodata, password_hash, created_at, updated_at
     FROM users
     WHERE id = ${id}::uuid
     LIMIT 1
@@ -150,20 +202,68 @@ export async function findUserById(id: string): Promise<User | null> {
   const row = result[0];
   return {
     id: row.id,
+    login_name: row.login_name,
+    name: row.name,
+    father_name: row.father_name,
     email: row.email,
+    phone: row.phone,
+    biodata: row.biodata,
     password_hash: row.password_hash,
     created_at: row.created_at?.toISOString?.() || row.created_at,
     updated_at: row.updated_at?.toISOString?.() || row.updated_at,
   };
 }
 
-export async function createUser(email: string, passwordHash: string): Promise<User> {
+export async function findUserByLoginName(loginName: string): Promise<User | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.users.find(u => u.login_name.toLowerCase() === loginName.toLowerCase()) || null;
+  }
+
+  const result = await sql`
+    SELECT id, login_name, name, father_name, email, phone, biodata, password_hash, created_at, updated_at
+    FROM users
+    WHERE LOWER(login_name) = LOWER(${loginName})
+    LIMIT 1
+  `;
+
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    login_name: row.login_name,
+    name: row.name,
+    father_name: row.father_name,
+    email: row.email,
+    phone: row.phone,
+    biodata: row.biodata,
+    password_hash: row.password_hash,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+    updated_at: row.updated_at?.toISOString?.() || row.updated_at,
+  };
+}
+
+export async function createUser(
+  loginName: string,
+  passwordHash: string,
+  name: string,
+  fatherName: string,
+  email?: string | null,
+  phone?: string | null,
+  biodata?: string | null,
+): Promise<User> {
   if (!sql) {
     const db = getInMemoryDb();
     const now = new Date().toISOString();
     const user: User = {
       id: generateId(),
-      email: email.toLowerCase(),
+      login_name: loginName.toLowerCase(),
+      name,
+      father_name: fatherName,
+      email: email?.toLowerCase() || null,
+      phone: phone || null,
+      biodata: biodata || null,
       password_hash: passwordHash,
       created_at: now,
       updated_at: now,
@@ -173,19 +273,115 @@ export async function createUser(email: string, passwordHash: string): Promise<U
   }
 
   const result = await sql`
-    INSERT INTO users (email, password_hash)
-    VALUES (${email.toLowerCase()}, ${passwordHash})
-    RETURNING id, email, password_hash, created_at, updated_at
+    INSERT INTO users (login_name, name, father_name, email, phone, biodata, password_hash)
+    VALUES (${loginName.toLowerCase()}, ${name}, ${fatherName}, ${email?.toLowerCase() || null}, ${phone || null}, ${biodata || null}, ${passwordHash})
+    RETURNING id, login_name, name, father_name, email, phone, biodata, password_hash, created_at, updated_at
   `;
 
   const row = result[0];
   return {
     id: row.id,
+    login_name: row.login_name,
+    name: row.name,
+    father_name: row.father_name,
     email: row.email,
+    phone: row.phone,
+    biodata: row.biodata,
     password_hash: row.password_hash,
     created_at: row.created_at?.toISOString?.() || row.created_at,
     updated_at: row.updated_at?.toISOString?.() || row.updated_at,
   };
+}
+
+// ============================================
+// Password reset token operations
+// ============================================
+export async function createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const now = new Date().toISOString();
+    const resetToken: PasswordResetToken = {
+      id: generateId(),
+      user_id: userId,
+      token,
+      expires_at: expiresAt.toISOString(),
+      used: false,
+      created_at: now,
+    };
+    db.password_reset_tokens.push(resetToken);
+    return resetToken;
+  }
+
+  const result = await sql`
+    INSERT INTO password_reset_tokens (user_id, token, expires_at)
+    VALUES (${userId}::uuid, ${token}, ${expiresAt.toISOString()})
+    RETURNING id, user_id, token, expires_at, used, created_at
+  `;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    token: row.token,
+    expires_at: row.expires_at?.toISOString?.() || row.expires_at,
+    used: row.used,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+  };
+}
+
+export async function findPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    return db.password_reset_tokens.find(t => t.token === token) || null;
+  }
+
+  const result = await sql`
+    SELECT id, user_id, token, expires_at, used, created_at
+    FROM password_reset_tokens
+    WHERE token = ${token}
+    LIMIT 1
+  `;
+
+  if (result.length === 0) return null;
+
+  const row = result[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    token: row.token,
+    expires_at: row.expires_at?.toISOString?.() || row.expires_at,
+    used: row.used,
+    created_at: row.created_at?.toISOString?.() || row.created_at,
+  };
+}
+
+export async function markTokenUsed(token: string): Promise<void> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const t = db.password_reset_tokens.find(t => t.token === token);
+    if (t) t.used = true;
+    return;
+  }
+
+  await sql`
+    UPDATE password_reset_tokens SET used = TRUE WHERE token = ${token}
+  `;
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+  if (!sql) {
+    const db = getInMemoryDb();
+    const user = db.users.find(u => u.id === userId);
+    if (user) {
+      user.password_hash = passwordHash;
+      user.updated_at = new Date().toISOString();
+    }
+    return;
+  }
+
+  await sql`
+    UPDATE users SET password_hash = ${passwordHash}, updated_at = NOW() WHERE id = ${userId}::uuid
+  `;
 }
 
 // ============================================

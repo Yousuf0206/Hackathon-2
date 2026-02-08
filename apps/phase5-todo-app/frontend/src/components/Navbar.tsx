@@ -99,9 +99,9 @@ export default function Navbar() {
             <ChatToggleButton />
             <div className="user-info">
               <div className="user-avatar">
-                {session.user.email.charAt(0).toUpperCase()}
+                {(session.user as any).name?.charAt(0)?.toUpperCase() || (session.user as any).login_name?.charAt(0)?.toUpperCase() || '?'}
               </div>
-              <span className="user-email">{session.user.email}</span>
+              <span className="user-email">{(session.user as any).name || (session.user as any).login_name || session.user.email}</span>
             </div>
             <button
               onClick={handleLogout}

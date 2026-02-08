@@ -6,7 +6,7 @@ import { getSession, AuthSession } from '@/library/auth';
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: { id: string; email: string } | null;
+  user: { id: string; login_name: string; name: string; email: string | null } | null;
   refreshAuth: () => void;
 }
 
@@ -24,7 +24,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; login_name: string; name: string; email: string | null } | null>(null);
 
   const refreshAuth = () => {
     const session = getSession();
@@ -32,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
       setUser({
         id: session.user.id,
+        login_name: session.user.login_name,
+        name: session.user.name,
         email: session.user.email,
       });
     } else {
