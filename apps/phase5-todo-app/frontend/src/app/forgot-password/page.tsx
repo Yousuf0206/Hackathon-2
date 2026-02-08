@@ -1,72 +1,47 @@
 /**
- * Modern Professional Login Page
- * Login by Login Name + Password with Forgot Password link
+ * Forgot Password Page
+ * Enter login name to receive password reset email
  */
 'use client';
 
-import { useState, FormEvent, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-function LoginContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export default function ForgotPasswordPage() {
   const [loginName, setLoginName] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get('expired') === 'true') {
-      setError('Your session has expired. Please log in again.');
-    }
-    if (searchParams.get('reset') === 'true') {
-      setSuccess('Password reset successfully. You can now log in with your new password.');
-    }
-  }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (!loginName || !password) {
-      setError('Login name and password are required');
+    if (!loginName) {
+      setError('Please enter your login name');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login_name: loginName, password }),
+        body: JSON.stringify({ login_name: loginName }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        if (response.status === 401) {
-          setError('Invalid login name or password');
-        } else if (data.detail) {
-          setError(data.detail);
-        } else {
-          setError('Login failed. Please try again.');
-        }
+        setError(data.detail || 'Something went wrong. Please try again.');
         return;
       }
 
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
-      }
-
-      router.push('/todos');
+      setSuccess(data.message || 'If a matching account was found, a password reset link has been sent.');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -76,20 +51,20 @@ function LoginContent() {
 
   return (
     <div className="page-wrapper">
-      <div className="login-container">
-        <div className="login-card">
+      <div className="forgot-container">
+        <div className="forgot-card">
           <div className="card-header">
             <div className="brand-logo">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 11l3 3L22 4" />
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
             </div>
-            <h1>Welcome back</h1>
-            <p>Enter your credentials to access your tasks</p>
+            <h1>Forgot Password?</h1>
+            <p>Enter your login name and we&apos;ll send a reset link to your email</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit} className="forgot-form">
             {success && (
               <div className="success-banner">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -129,45 +104,6 @@ function LoginContent() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  disabled={loading}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="toggle-password"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              <div className="forgot-link">
-                <Link href="/forgot-password">Forgot Password?</Link>
-              </div>
-            </div>
-
             <button
               type="submit"
               className="btn-submit"
@@ -176,50 +112,25 @@ function LoginContent() {
               {loading ? (
                 <>
                   <span className="spinner"></span>
-                  Signing in...
+                  Sending...
                 </>
               ) : (
-                'Sign In'
+                'Send Reset Link'
               )}
             </button>
-
-            <div className="divider">
-              <span>or</span>
-            </div>
-
-            <div className="card-footer">
-              <p>
-                Don&apos;t have an account?{' '}
-                <Link href="/register">Create one</Link>
-              </p>
-            </div>
           </form>
+
+          <div className="card-footer">
+            <p>
+              <Link href="/login">Back to Login</Link>
+            </p>
+          </div>
         </div>
 
-        <div className="login-illustration">
+        <div className="forgot-illustration">
           <div className="illustration-content">
-            <h2>Stay organized, stay productive</h2>
-            <p>Manage your tasks efficiently with our intuitive todo application</p>
-            <div className="illustration-features">
-              <div className="feature">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20,6 9,17 4,12" />
-                </svg>
-                <span>Create and manage tasks</span>
-              </div>
-              <div className="feature">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20,6 9,17 4,12" />
-                </svg>
-                <span>Track your progress</span>
-              </div>
-              <div className="feature">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20,6 9,17 4,12" />
-                </svg>
-                <span>Secure authentication</span>
-              </div>
-            </div>
+            <h2>Don&apos;t worry, it happens!</h2>
+            <p>We&apos;ll help you get back into your account</p>
           </div>
         </div>
       </div>
@@ -230,13 +141,13 @@ function LoginContent() {
           background: var(--gray-50);
         }
 
-        .login-container {
+        .forgot-container {
           display: grid;
           grid-template-columns: 1fr 1fr;
           min-height: 100vh;
         }
 
-        .login-card {
+        .forgot-card {
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -276,7 +187,7 @@ function LoginContent() {
           margin: 0;
         }
 
-        .login-form {
+        .forgot-form {
           max-width: 380px;
           margin: 0 auto;
           width: 100%;
@@ -376,50 +287,6 @@ function LoginContent() {
           cursor: not-allowed;
         }
 
-        .toggle-password {
-          position: absolute;
-          right: 0.75rem;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--gray-400);
-          border-radius: var(--radius-md);
-          transition: all var(--transition-fast);
-        }
-
-        .toggle-password:hover {
-          color: var(--gray-600);
-          background: var(--gray-100);
-        }
-
-        .toggle-password svg {
-          width: 20px;
-          height: 20px;
-        }
-
-        input[type="password"] {
-          padding-right: 3rem;
-        }
-
-        .forgot-link {
-          text-align: right;
-          margin-top: 0.5rem;
-        }
-
-        .forgot-link a {
-          font-size: 0.8125rem;
-          color: var(--primary-600);
-          font-weight: 500;
-        }
-
-        .forgot-link a:hover {
-          color: var(--primary-700);
-        }
-
         .btn-submit {
           display: flex;
           align-items: center;
@@ -461,26 +328,6 @@ function LoginContent() {
           to { transform: rotate(360deg); }
         }
 
-        .divider {
-          display: flex;
-          align-items: center;
-          margin: 1.5rem 0;
-        }
-
-        .divider::before,
-        .divider::after {
-          content: '';
-          flex: 1;
-          height: 1px;
-          background: var(--gray-300);
-        }
-
-        .divider span {
-          padding: 0 1rem;
-          color: var(--gray-500);
-          font-size: 0.875rem;
-        }
-
         .card-footer {
           text-align: center;
           margin-top: 2rem;
@@ -500,7 +347,7 @@ function LoginContent() {
           color: var(--primary-700);
         }
 
-        .login-illustration {
+        .forgot-illustration {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -524,50 +371,25 @@ function LoginContent() {
         .illustration-content > p {
           font-size: 1.125rem;
           opacity: 0.9;
-          margin: 0 0 2rem 0;
-        }
-
-        .illustration-features {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-
-        .feature {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem 1rem;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: var(--radius-md);
-        }
-
-        .feature svg {
-          width: 20px;
-          height: 20px;
-          flex-shrink: 0;
-        }
-
-        .feature span {
-          font-size: 0.9375rem;
+          margin: 0;
         }
 
         @media (max-width: 1024px) {
-          .login-container {
+          .forgot-container {
             grid-template-columns: 1fr;
           }
 
-          .login-illustration {
+          .forgot-illustration {
             display: none;
           }
 
-          .login-card {
+          .forgot-card {
             padding: 2rem;
           }
         }
 
         @media (max-width: 480px) {
-          .login-card {
+          .forgot-card {
             padding: 1.5rem;
           }
 
@@ -586,21 +408,5 @@ function LoginContent() {
         }
       `}</style>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="page-wrapper">
-        <div className="login-container">
-          <div className="login-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '3rem' }}>
-            <p>Loading...</p>
-          </div>
-        </div>
-      </div>
-    }>
-      <LoginContent />
-    </Suspense>
   );
 }

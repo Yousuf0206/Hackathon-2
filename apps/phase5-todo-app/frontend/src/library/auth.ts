@@ -7,7 +7,9 @@ export interface AuthSession {
   token: string;
   user: {
     id: string;
-    email: string;
+    login_name: string;
+    name: string;
+    email: string | null;
   };
 }
 

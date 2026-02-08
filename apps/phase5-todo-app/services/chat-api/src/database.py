@@ -51,11 +51,11 @@ def init_db() -> None:
 
 
 def _apply_migrations() -> None:
-    """Add Phase IV columns (due_date, due_time) to tasks table if missing."""
+    """Apply column migrations for existing DBs."""
     if "sqlite" in settings.database_url:
         return  # SQLite: create_all handles fresh DBs; skip ALTER TABLE
     with engine.connect() as conn:
-        # Check if due_date column exists
+        # Phase IV: Add due_date, due_time to tasks table
         result = conn.execute(text(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = 'tasks' AND column_name = 'due_date'"
@@ -63,7 +63,6 @@ def _apply_migrations() -> None:
         if result.fetchone() is None:
             conn.execute(text("ALTER TABLE tasks ADD COLUMN due_date DATE"))
             logger.info("Migration: added due_date column to tasks table")
-        # Check if due_time column exists
         result = conn.execute(text(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = 'tasks' AND column_name = 'due_time'"
@@ -71,7 +70,33 @@ def _apply_migrations() -> None:
         if result.fetchone() is None:
             conn.execute(text("ALTER TABLE tasks ADD COLUMN due_time VARCHAR(5)"))
             logger.info("Migration: added due_time column to tasks table")
+
+        # Phase 5: Add login_name, name, father_name, phone, biodata to users table
+        _add_column_if_missing(conn, "users", "login_name", "VARCHAR(30) UNIQUE")
+        _add_column_if_missing(conn, "users", "name", "VARCHAR(255) NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "users", "father_name", "VARCHAR(255) NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "users", "phone", "VARCHAR(20)")
+        _add_column_if_missing(conn, "users", "biodata", "TEXT")
+
+        # Backfill login_name from email for existing users
+        conn.execute(text("UPDATE users SET login_name = email WHERE login_name IS NULL"))
+
+        # Make email nullable
+        conn.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL"))
+        logger.info("Migration: applied Phase 5 user schema changes")
+
         conn.commit()
+
+
+def _add_column_if_missing(conn, table: str, column: str, col_type: str) -> None:
+    """Add a column to a table if it doesn't already exist."""
+    result = conn.execute(text(
+        f"SELECT column_name FROM information_schema.columns "
+        f"WHERE table_name = '{table}' AND column_name = '{column}'"
+    ))
+    if result.fetchone() is None:
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+        logger.info(f"Migration: added {column} column to {table} table")
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 /**
- * POST /api/auth/login - Login user
+ * POST /api/auth/login - Login user by login_name
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { findUserByEmail, initDatabase } from '@/lib/db';
+import { findUserByLoginName, initDatabase } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 import { createAccessToken } from '@/lib/jwt';
 
@@ -12,27 +12,18 @@ export async function POST(request: NextRequest) {
     await initDatabase();
 
     const body = await request.json();
-    const { email, password } = body;
+    const { login_name, password } = body;
 
     // Validate input
-    if (!email || !password) {
+    if (!login_name || !password) {
       return NextResponse.json(
-        { detail: 'Email and password are required' },
+        { detail: 'Login name and password are required' },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailPattern.test(email)) {
-      return NextResponse.json(
-        { detail: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Find user
-    const user = await findUserByEmail(email);
+    // Find user by login_name
+    const user = await findUserByLoginName(login_name);
 
     // Generic error to prevent user enumeration
     const invalidCredentials = NextResponse.json(
@@ -56,6 +47,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       user: {
         id: user.id,
+        login_name: user.login_name,
+        name: user.name,
         email: user.email,
         created_at: user.created_at,
       },

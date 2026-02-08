@@ -22,20 +22,27 @@ router = APIRouter()
 
 class RegisterRequest(BaseModel):
     """Registration request payload."""
-    email: str
+    login_name: str = Field(min_length=3, max_length=30)
+    name: str
+    father_name: str
+    email: str | None = None
+    phone: str | None = None
+    biodata: str | None = None
     password: str = Field(min_length=8)
 
 
 class LoginRequest(BaseModel):
     """Login request payload."""
-    email: str
+    login_name: str
     password: str
 
 
 class UserResponse(BaseModel):
     """User response without password."""
     id: str
-    email: str
+    login_name: str
+    name: str
+    email: str | None = None
     created_at: str
 
 
@@ -51,6 +58,12 @@ def validate_email(email: str) -> bool:
     return re.match(pattern, email) is not None
 
 
+def validate_login_name(login_name: str) -> bool:
+    """Validate login_name format: alphanumeric + underscore, 3-30 chars."""
+    pattern = r'^[a-zA-Z0-9_]{3,30}$'
+    return re.match(pattern, login_name) is not None
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
     request: RegisterRequest,
@@ -58,22 +71,22 @@ def register(
 ):
     """
     Register a new user account.
-
-    T025: POST /api/auth/register
-    - Validates email format
-    - Checks uniqueness (409 if exists)
+    - Validates login_name format and uniqueness
+    - Validates optional email format
     - Hashes password
-    - Creates user
+    - Creates user with all fields
     - Generates JWT with user_id in sub claim
     - Returns 201 with user and token
-
-    T031: Input validation
-    - 400 for missing fields
-    - 400 for invalid email format
-    - 400 for password < 8 chars
     """
-    # Validate email format
-    if not validate_email(request.email):
+    # Validate login_name format
+    if not validate_login_name(request.login_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Login name must be 3-30 characters, alphanumeric and underscore only"
+        )
+
+    # Validate email format if provided
+    if request.email and not validate_email(request.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid email format"
@@ -86,23 +99,39 @@ def register(
             detail="Password must be at least 8 characters"
         )
 
-    # Check if user already exists
+    # Check if login_name already exists
     existing_user = session.exec(
-        select(User).where(User.email == request.email)
+        select(User).where(User.login_name == request.login_name.lower())
     ).first()
 
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered"
+            detail="Login name already taken"
         )
+
+    # Check if email already exists (if provided)
+    if request.email:
+        existing_email = session.exec(
+            select(User).where(User.email == request.email)
+        ).first()
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered"
+            )
 
     # Hash password
     password_hash = hash_password(request.password)
 
     # Create new user
     new_user = User(
+        login_name=request.login_name.lower(),
+        name=request.name,
+        father_name=request.father_name,
         email=request.email,
+        phone=request.phone,
+        biodata=request.biodata,
         password_hash=password_hash
     )
 
@@ -117,6 +146,8 @@ def register(
     return AuthResponse(
         user=UserResponse(
             id=str(new_user.id),
+            login_name=new_user.login_name,
+            name=new_user.name,
             email=new_user.email,
             created_at=new_user.created_at.isoformat()
         ),
@@ -131,28 +162,15 @@ def login(
 ):
     """
     Authenticate user and issue JWT token.
-
-    T026: POST /api/auth/login
-    - Validates credentials
+    - Looks up user by login_name
     - Verifies password hash
     - Generates JWT with user_id in sub claim
     - Returns 200 with user and token
     - 401 on invalid credentials without leaking user existence
-
-    T031: Error handling
-    - 400 for missing fields
-    - 401 for invalid credentials
     """
-    # Validate email format
-    if not validate_email(request.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email format"
-        )
-
-    # Find user by email
+    # Find user by login_name
     user = session.exec(
-        select(User).where(User.email == request.email)
+        select(User).where(User.login_name == request.login_name.lower())
     ).first()
 
     # Generic error message to prevent user enumeration
@@ -175,6 +193,8 @@ def login(
     return AuthResponse(
         user=UserResponse(
             id=str(user.id),
+            login_name=user.login_name,
+            name=user.name,
             email=user.email,
             created_at=user.created_at.isoformat()
         ),
