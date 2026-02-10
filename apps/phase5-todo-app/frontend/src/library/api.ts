@@ -113,10 +113,20 @@ export const api = {
   getTasks: (status: 'all' | 'pending' | 'completed' = 'all') =>
     apiRequest(`/api/tasks?status=${status}`),
 
-  createTask: (title: string, description: string | null, due_date?: string | null, due_time?: string | null) =>
+  createTask: (
+    title: string, description: string | null,
+    due_date?: string | null, due_time?: string | null,
+    priority?: string, tags?: string | null,
+    recurrence?: { frequency: string; end_after_count?: number | null; end_by_date?: string | null } | null
+  ) =>
     apiRequest('/api/tasks', {
       method: 'POST',
-      body: JSON.stringify({ title, description, due_date: due_date || null, due_time: due_time || null }),
+      body: JSON.stringify({
+        title, description,
+        due_date: due_date || null, due_time: due_time || null,
+        priority: priority || 'medium', tags: tags || null,
+        recurrence: recurrence || null,
+      }),
     }),
 
   toggleTaskComplete: (id: number, completed: boolean) =>
@@ -125,10 +135,20 @@ export const api = {
       body: JSON.stringify({ completed }),
     }),
 
-  updateTask: (id: number, title: string, description: string | null) =>
+  updateTask: (
+    id: number, title: string, description: string | null,
+    priority?: string, tags?: string | null,
+    due_date?: string | null, due_time?: string | null,
+    recurrence?: { frequency: string; end_after_count?: number | null; end_by_date?: string | null } | null
+  ) =>
     apiRequest(`/api/tasks/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({
+        title, description,
+        priority, tags,
+        due_date, due_time,
+        recurrence: recurrence || null,
+      }),
     }),
 
   deleteTask: (id: number) =>

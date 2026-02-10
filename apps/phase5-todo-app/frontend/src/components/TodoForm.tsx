@@ -1,6 +1,6 @@
 /**
  * Modern Professional Todo Form Component
- * Features clean design, smooth animations, and accessible form elements
+ * Features: Priority selector, tags input, due date/time, recurrence, clean design
  */
 'use client';
 
@@ -15,6 +15,15 @@ interface TodoFormProps {
 export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [tags, setTags] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [endAfterCount, setEndAfterCount] = useState('');
+  const [endByDate, setEndByDate] = useState('');
+  const [endCondition, setEndCondition] = useState<'never' | 'after' | 'by_date'>('never');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -23,7 +32,6 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
     e.preventDefault();
     setError(null);
 
-    // Client-side validation
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       setError('Please enter a task title');
@@ -44,7 +52,18 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
 
     try {
       if (source === 'tasks') {
-        await api.createTask(trimmedTitle, description || null);
+        const recurrence = isRecurring ? {
+          frequency: recurrenceFrequency,
+          end_after_count: endCondition === 'after' && endAfterCount ? parseInt(endAfterCount) : null,
+          end_by_date: endCondition === 'by_date' && endByDate ? endByDate : null,
+        } : null;
+
+        await api.createTask(
+          trimmedTitle, description || null,
+          dueDate || null, dueTime || null,
+          priority, tags.trim() || null,
+          recurrence
+        );
       } else {
         await api.createTodo(trimmedTitle, description || null);
       }
@@ -52,9 +71,17 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
       // Clear form on success
       setTitle('');
       setDescription('');
+      setPriority('medium');
+      setTags('');
+      setDueDate('');
+      setDueTime('');
+      setIsRecurring(false);
+      setRecurrenceFrequency('daily');
+      setEndAfterCount('');
+      setEndByDate('');
+      setEndCondition('never');
       setIsExpanded(false);
 
-      // Notify parent to refresh todo list
       onTodoCreated();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -140,6 +167,118 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
               />
               <div className="char-count">{description.length}/5000</div>
             </div>
+
+            {source === 'tasks' && (
+              <>
+                <div className="form-group">
+                  <label>Priority</label>
+                  <div className="priority-selector">
+                    {(['high', 'medium', 'low'] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`priority-btn priority-${p} ${priority === p ? 'active' : ''}`}
+                        onClick={() => setPriority(p)}
+                        disabled={isSubmitting}
+                      >
+                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="tags">Tags <span className="optional">(optional, comma-separated)</span></label>
+                  <input
+                    id="tags"
+                    type="text"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="work, home, urgent"
+                    maxLength={1000}
+                    disabled={isSubmitting}
+                    className="tags-input"
+                  />
+                </div>
+
+                <div className="date-time-section">
+                  <label>Due Date & Time <span className="optional">(optional)</span></label>
+                  <div className="date-time-row">
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      disabled={isSubmitting}
+                    />
+                    <input
+                      type="time"
+                      value={dueTime}
+                      onChange={(e) => setDueTime(e.target.value)}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="recurrence-section">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      disabled={isSubmitting}
+                    />
+                    <span>Make this a recurring task</span>
+                  </label>
+                  {isRecurring && (
+                    <div className="recurrence-options">
+                      <div className="frequency-selector">
+                        {(['daily', 'weekly', 'monthly'] as const).map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            className={`freq-btn ${recurrenceFrequency === f ? 'active' : ''}`}
+                            onClick={() => setRecurrenceFrequency(f)}
+                            disabled={isSubmitting}
+                          >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="end-condition">
+                        <label>Ends</label>
+                        <select
+                          value={endCondition}
+                          onChange={(e) => setEndCondition(e.target.value as 'never' | 'after' | 'by_date')}
+                          disabled={isSubmitting}
+                        >
+                          <option value="never">Never</option>
+                          <option value="after">After N occurrences</option>
+                          <option value="by_date">By date</option>
+                        </select>
+                        {endCondition === 'after' && (
+                          <input
+                            type="number"
+                            min="1"
+                            value={endAfterCount}
+                            onChange={(e) => setEndAfterCount(e.target.value)}
+                            placeholder="Number of times"
+                            disabled={isSubmitting}
+                          />
+                        )}
+                        {endCondition === 'by_date' && (
+                          <input
+                            type="date"
+                            value={endByDate}
+                            onChange={(e) => setEndByDate(e.target.value)}
+                            disabled={isSubmitting}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="form-actions">
@@ -307,7 +446,8 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
           font-weight: normal;
         }
 
-        input,
+        input[type="text"],
+        input[type="number"],
         textarea {
           width: 100%;
           padding: 0.875rem 1rem;
@@ -319,7 +459,8 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
           transition: all var(--transition-fast);
         }
 
-        input:focus,
+        input[type="text"]:focus,
+        input[type="number"]:focus,
         textarea:focus {
           outline: none;
           border-color: var(--primary-500);
@@ -344,12 +485,146 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
           color: var(--gray-400);
         }
 
-        .form-group input {
+        .form-group input[type="text"] {
           padding-right: 4rem;
+        }
+
+        .tags-input {
+          padding-right: 1rem !important;
         }
 
         .form-group textarea {
           padding-bottom: 2rem;
+        }
+
+        .priority-selector {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .priority-btn {
+          flex: 1;
+          padding: 0.5rem 1rem;
+          border: 2px solid var(--gray-200);
+          border-radius: var(--radius-md);
+          font-size: 0.875rem;
+          font-weight: 500;
+          background: white;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .priority-btn.priority-high { color: #dc2626; }
+        .priority-btn.priority-medium { color: #d97706; }
+        .priority-btn.priority-low { color: #16a34a; }
+
+        .priority-btn.priority-high.active { background: #fef2f2; border-color: #dc2626; }
+        .priority-btn.priority-medium.active { background: #fffbeb; border-color: #d97706; }
+        .priority-btn.priority-low.active { background: #f0fdf4; border-color: #16a34a; }
+
+        .priority-btn:hover:not(:disabled) { opacity: 0.8; }
+
+        .date-time-section {
+          margin-bottom: 1.25rem;
+        }
+
+        .date-time-row {
+          display: flex;
+          gap: 0.75rem;
+        }
+
+        .date-time-row input {
+          flex: 1;
+          padding: 0.75rem 1rem;
+          border: 1px solid var(--gray-300);
+          border-radius: var(--radius-md);
+          font-size: 0.875rem;
+          color: var(--gray-800);
+        }
+
+        .date-time-row input:focus {
+          outline: none;
+          border-color: var(--primary-500);
+          box-shadow: 0 0 0 3px var(--primary-100);
+        }
+
+        .recurrence-section {
+          margin-bottom: 1.25rem;
+          padding: 1rem;
+          background: var(--gray-50);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--gray-200);
+        }
+
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          cursor: pointer;
+          margin-bottom: 0;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+          width: 16px;
+          height: 16px;
+          cursor: pointer;
+        }
+
+        .recurrence-options {
+          margin-top: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .frequency-selector {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .freq-btn {
+          flex: 1;
+          padding: 0.5rem 0.75rem;
+          border: 2px solid var(--gray-200);
+          border-radius: var(--radius-md);
+          font-size: 0.875rem;
+          font-weight: 500;
+          background: white;
+          color: var(--gray-600);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .freq-btn.active {
+          background: var(--primary-50);
+          border-color: var(--primary-500);
+          color: var(--primary-700);
+        }
+
+        .end-condition {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          align-items: center;
+        }
+
+        .end-condition select,
+        .end-condition input {
+          padding: 0.5rem 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: var(--radius-md);
+          font-size: 0.875rem;
+          color: var(--gray-800);
+        }
+
+        .end-condition select:focus,
+        .end-condition input:focus {
+          outline: none;
+          border-color: var(--primary-500);
+        }
+
+        .end-condition input[type="number"] {
+          width: 120px;
         }
 
         .form-actions {
@@ -434,6 +709,15 @@ export function TodoForm({ onTodoCreated, source = 'todos' }: TodoFormProps) {
           .btn-submit {
             width: 100%;
             justify-content: center;
+          }
+
+          .date-time-row {
+            flex-direction: column;
+          }
+
+          .priority-selector,
+          .frequency-selector {
+            flex-direction: column;
           }
         }
       `}</style>

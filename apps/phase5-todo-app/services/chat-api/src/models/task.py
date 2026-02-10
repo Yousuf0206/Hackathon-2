@@ -9,7 +9,6 @@ from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, Enum as SAEnum, ForeignKey
 from typing import Optional
 from datetime import datetime, date
-from uuid import UUID
 import re
 import enum
 
@@ -19,6 +18,13 @@ class TaskStatus(str, enum.Enum):
     pending = "pending"
     completed = "completed"
     deleted = "deleted"
+
+
+class TaskPriority(str, enum.Enum):
+    """Task priority levels."""
+    high = "high"
+    medium = "medium"
+    low = "low"
 
 
 class Task(SQLModel, table=True):
@@ -45,6 +51,15 @@ class Task(SQLModel, table=True):
             nullable=False,
         ),
     )
+    priority: str = Field(
+        default=TaskPriority.medium.value,
+        sa_column=Column(
+            SAEnum(TaskPriority, name="taskpriority", create_constraint=False),
+            default=TaskPriority.medium.value,
+            nullable=False,
+        ),
+    )
+    tags: Optional[str] = Field(default=None, max_length=1000)
     due_date: Optional[date] = Field(default=None)
     due_time: Optional[str] = Field(default=None, max_length=5)
     reminder_time: Optional[datetime] = Field(default=None)

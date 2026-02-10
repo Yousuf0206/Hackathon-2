@@ -46,7 +46,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       id: task.id, user_id: task.user_id, title: task.title, description: task.description,
-      completed: task.completed, due_date: task.due_date, due_time: task.due_time,
+      completed: task.completed, priority: task.priority || 'medium', tags: task.tags || null,
+      due_date: task.due_date, due_time: task.due_time,
       created_at: task.created_at, updated_at: task.updated_at,
     });
   } catch (error) {

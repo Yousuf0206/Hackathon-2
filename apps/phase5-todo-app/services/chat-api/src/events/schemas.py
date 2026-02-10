@@ -29,6 +29,8 @@ class TaskCreatedData(BaseModel):
     due_date: Optional[str] = None
     reminder_time: Optional[str] = None
     recurrence_rule: Optional[Dict[str, Any]] = None
+    priority: str = "medium"
+    tags: Optional[str] = None
 
 
 class TaskUpdatedData(BaseModel):

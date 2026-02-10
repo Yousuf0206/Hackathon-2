@@ -1,6 +1,6 @@
 /**
  * Modern Professional Todo Edit Form Component
- * Features clean design and consistent styling with the rest of the app
+ * Features: Priority, tags, due date/time, recurrence editing
  */
 'use client';
 
@@ -18,6 +18,23 @@ interface TodoEditFormProps {
 export function TodoEditForm({ todo, onSave, onCancel, source = 'todos' }: TodoEditFormProps) {
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description || '');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(todo.priority || 'medium');
+  const [tags, setTags] = useState(todo.tags || '');
+  const [dueDate, setDueDate] = useState(todo.due_date || '');
+  const [dueTime, setDueTime] = useState(todo.due_time || '');
+  const [isRecurring, setIsRecurring] = useState(!!todo.recurrence);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<'daily' | 'weekly' | 'monthly'>(
+    (todo.recurrence?.frequency as 'daily' | 'weekly' | 'monthly') || 'daily'
+  );
+  const [endAfterCount, setEndAfterCount] = useState(
+    todo.recurrence?.end_after_count?.toString() || ''
+  );
+  const [endByDate, setEndByDate] = useState(todo.recurrence?.end_by_date || '');
+  const [endCondition, setEndCondition] = useState<'never' | 'after' | 'by_date'>(
+    todo.recurrence?.end_after_count ? 'after'
+      : todo.recurrence?.end_by_date ? 'by_date'
+      : 'never'
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +62,18 @@ export function TodoEditForm({ todo, onSave, onCancel, source = 'todos' }: TodoE
 
     try {
       if (source === 'tasks') {
-        await api.updateTask(todo.id as number, trimmedTitle, description || null);
+        const recurrence = isRecurring ? {
+          frequency: recurrenceFrequency,
+          end_after_count: endCondition === 'after' && endAfterCount ? parseInt(endAfterCount) : null,
+          end_by_date: endCondition === 'by_date' && endByDate ? endByDate : null,
+        } : null;
+
+        await api.updateTask(
+          todo.id as number, trimmedTitle, description || null,
+          priority, tags.trim() || null,
+          dueDate || null, dueTime || null,
+          recurrence
+        );
       } else {
         await api.updateTodo(todo.id as string, trimmedTitle, description || null);
       }
@@ -131,6 +159,118 @@ export function TodoEditForm({ todo, onSave, onCancel, source = 'todos' }: TodoE
             />
             <div className="char-count">{description.length}/5000</div>
           </div>
+
+          {source === 'tasks' && (
+            <>
+              <div className="form-group">
+                <label>Priority</label>
+                <div className="priority-selector">
+                  {(['high', 'medium', 'low'] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`priority-btn priority-${p} ${priority === p ? 'active' : ''}`}
+                      onClick={() => setPriority(p)}
+                      disabled={isSubmitting}
+                    >
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor={`edit-tags-${todo.id}`}>Tags <span className="optional">(optional, comma-separated)</span></label>
+                <input
+                  id={`edit-tags-${todo.id}`}
+                  type="text"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="work, home, urgent"
+                  maxLength={1000}
+                  disabled={isSubmitting}
+                  className="tags-input"
+                />
+              </div>
+
+              <div className="date-time-section">
+                <label>Due Date & Time <span className="optional">(optional)</span></label>
+                <div className="date-time-row">
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                  <input
+                    type="time"
+                    value={dueTime}
+                    onChange={(e) => setDueTime(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+
+              <div className="recurrence-section">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    disabled={isSubmitting}
+                  />
+                  <span>Make this a recurring task</span>
+                </label>
+                {isRecurring && (
+                  <div className="recurrence-options">
+                    <div className="frequency-selector">
+                      {(['daily', 'weekly', 'monthly'] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          className={`freq-btn ${recurrenceFrequency === f ? 'active' : ''}`}
+                          onClick={() => setRecurrenceFrequency(f)}
+                          disabled={isSubmitting}
+                        >
+                          {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="end-condition">
+                      <label>Ends</label>
+                      <select
+                        value={endCondition}
+                        onChange={(e) => setEndCondition(e.target.value as 'never' | 'after' | 'by_date')}
+                        disabled={isSubmitting}
+                      >
+                        <option value="never">Never</option>
+                        <option value="after">After N occurrences</option>
+                        <option value="by_date">By date</option>
+                      </select>
+                      {endCondition === 'after' && (
+                        <input
+                          type="number"
+                          min="1"
+                          value={endAfterCount}
+                          onChange={(e) => setEndAfterCount(e.target.value)}
+                          placeholder="Number of times"
+                          disabled={isSubmitting}
+                        />
+                      )}
+                      {endCondition === 'by_date' && (
+                        <input
+                          type="date"
+                          value={endByDate}
+                          onChange={(e) => setEndByDate(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="form-actions">
@@ -175,20 +315,11 @@ export function TodoEditForm({ todo, onSave, onCancel, source = 'todos' }: TodoE
         }
 
         @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
-        .edit-form {
-          display: flex;
-          flex-direction: column;
-        }
+        .edit-form { display: flex; flex-direction: column; }
 
         .form-header {
           display: flex;
@@ -199,208 +330,125 @@ export function TodoEditForm({ todo, onSave, onCancel, source = 'todos' }: TodoE
           border-bottom: 1px solid var(--gray-200);
         }
 
-        .form-header h3 {
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--gray-800);
-          margin: 0;
-        }
+        .form-header h3 { font-size: 1rem; font-weight: 600; color: var(--gray-800); margin: 0; }
 
         .close-button {
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: var(--radius-md);
-          color: var(--gray-500);
-          transition: all var(--transition-fast);
+          width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+          border-radius: var(--radius-md); color: var(--gray-500); transition: all var(--transition-fast);
         }
-
-        .close-button:hover {
-          background: var(--gray-200);
-          color: var(--gray-700);
-        }
-
-        .close-button svg {
-          width: 18px;
-          height: 18px;
-        }
+        .close-button:hover { background: var(--gray-200); color: var(--gray-700); }
+        .close-button svg { width: 18px; height: 18px; }
 
         .error-message {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin: 1rem 1.5rem 0;
-          padding: 0.75rem 1rem;
-          background: var(--error-light);
-          border: 1px solid var(--error);
-          color: var(--error);
-          border-radius: var(--radius-md);
-          font-size: 0.875rem;
-          font-weight: 500;
+          display: flex; align-items: center; gap: 0.5rem; margin: 1rem 1.5rem 0;
+          padding: 0.75rem 1rem; background: var(--error-light); border: 1px solid var(--error);
+          color: var(--error); border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 500;
         }
+        .error-message svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-        .error-message svg {
-          width: 18px;
-          height: 18px;
-          flex-shrink: 0;
-        }
+        .form-fields { padding: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; position: relative; }
+        .form-group:last-child { margin-bottom: 0; }
 
-        .form-fields {
-          padding: 1.5rem;
-        }
+        label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.5rem; }
+        .optional { color: var(--gray-400); font-weight: normal; }
 
-        .form-group {
-          margin-bottom: 1.25rem;
-          position: relative;
-        }
-
-        .form-group:last-child {
-          margin-bottom: 0;
-        }
-
-        label {
-          display: block;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: var(--gray-700);
-          margin-bottom: 0.5rem;
-        }
-
-        .optional {
-          color: var(--gray-400);
-          font-weight: normal;
-        }
-
-        input,
-        textarea {
-          width: 100%;
-          padding: 0.875rem 1rem;
-          background: white;
-          border: 1px solid var(--gray-300);
-          border-radius: var(--radius-md);
-          font-size: 0.9375rem;
-          color: var(--gray-800);
+        input[type="text"], input[type="number"], textarea {
+          width: 100%; padding: 0.875rem 1rem; background: white; border: 1px solid var(--gray-300);
+          border-radius: var(--radius-md); font-size: 0.9375rem; color: var(--gray-800);
           transition: all var(--transition-fast);
         }
-
-        input:focus,
-        textarea:focus {
-          outline: none;
-          border-color: var(--primary-500);
-          box-shadow: 0 0 0 3px var(--primary-100);
+        input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+          outline: none; border-color: var(--primary-500); box-shadow: 0 0 0 3px var(--primary-100);
         }
+        input::placeholder, textarea::placeholder { color: var(--gray-400); }
+        textarea { resize: vertical; min-height: 80px; }
 
-        input::placeholder,
-        textarea::placeholder {
-          color: var(--gray-400);
-        }
+        .char-count { position: absolute; right: 0.75rem; bottom: 0.5rem; font-size: 0.75rem; color: var(--gray-400); }
+        .form-group input[type="text"] { padding-right: 4rem; }
+        .tags-input { padding-right: 1rem !important; }
+        .form-group textarea { padding-bottom: 2rem; }
 
-        textarea {
-          resize: vertical;
-          min-height: 80px;
+        .priority-selector { display: flex; gap: 0.5rem; }
+        .priority-btn {
+          flex: 1; padding: 0.5rem 1rem; border: 2px solid var(--gray-200); border-radius: var(--radius-md);
+          font-size: 0.875rem; font-weight: 500; background: white; cursor: pointer;
+          transition: all var(--transition-fast);
         }
+        .priority-btn.priority-high { color: #dc2626; }
+        .priority-btn.priority-medium { color: #d97706; }
+        .priority-btn.priority-low { color: #16a34a; }
+        .priority-btn.priority-high.active { background: #fef2f2; border-color: #dc2626; }
+        .priority-btn.priority-medium.active { background: #fffbeb; border-color: #d97706; }
+        .priority-btn.priority-low.active { background: #f0fdf4; border-color: #16a34a; }
+        .priority-btn:hover:not(:disabled) { opacity: 0.8; }
 
-        .char-count {
-          position: absolute;
-          right: 0.75rem;
-          bottom: 0.5rem;
-          font-size: 0.75rem;
-          color: var(--gray-400);
+        .date-time-section { margin-bottom: 1.25rem; }
+        .date-time-row { display: flex; gap: 0.75rem; }
+        .date-time-row input {
+          flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--gray-300);
+          border-radius: var(--radius-md); font-size: 0.875rem; color: var(--gray-800);
         }
+        .date-time-row input:focus { outline: none; border-color: var(--primary-500); box-shadow: 0 0 0 3px var(--primary-100); }
 
-        .form-group input {
-          padding-right: 4rem;
+        .recurrence-section {
+          margin-bottom: 1.25rem; padding: 1rem; background: var(--gray-50);
+          border-radius: var(--radius-md); border: 1px solid var(--gray-200);
         }
-
-        .form-group textarea {
-          padding-bottom: 2rem;
+        .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 0; }
+        .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+        .recurrence-options { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .frequency-selector { display: flex; gap: 0.5rem; }
+        .freq-btn {
+          flex: 1; padding: 0.5rem 0.75rem; border: 2px solid var(--gray-200); border-radius: var(--radius-md);
+          font-size: 0.875rem; font-weight: 500; background: white; color: var(--gray-600); cursor: pointer;
+          transition: all var(--transition-fast);
         }
+        .freq-btn.active { background: var(--primary-50); border-color: var(--primary-500); color: var(--primary-700); }
+        .end-condition { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .end-condition select, .end-condition input {
+          padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300);
+          border-radius: var(--radius-md); font-size: 0.875rem; color: var(--gray-800);
+        }
+        .end-condition select:focus, .end-condition input:focus { outline: none; border-color: var(--primary-500); }
+        .end-condition input[type="number"] { width: 120px; }
 
         .form-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 0.75rem;
-          padding: 1rem 1.5rem;
-          background: var(--gray-50);
-          border-top: 1px solid var(--gray-200);
+          display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem;
+          background: var(--gray-50); border-top: 1px solid var(--gray-200);
         }
-
         .btn-cancel {
-          padding: 0.625rem 1.25rem;
-          background: white;
-          color: var(--gray-700);
-          border: 1px solid var(--gray-300);
-          border-radius: var(--radius-md);
-          font-weight: 500;
-          font-size: 0.9375rem;
-          transition: all var(--transition-fast);
+          padding: 0.625rem 1.25rem; background: white; color: var(--gray-700);
+          border: 1px solid var(--gray-300); border-radius: var(--radius-md);
+          font-weight: 500; font-size: 0.9375rem; transition: all var(--transition-fast);
         }
-
-        .btn-cancel:hover:not(:disabled) {
-          background: var(--gray-100);
-          border-color: var(--gray-400);
-        }
-
-        .btn-cancel:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+        .btn-cancel:hover:not(:disabled) { background: var(--gray-100); border-color: var(--gray-400); }
+        .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .btn-save {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.625rem 1.25rem;
+          display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem;
           background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-          color: white;
-          border: none;
-          border-radius: var(--radius-md);
-          font-weight: 500;
-          font-size: 0.9375rem;
-          transition: all var(--transition-fast);
+          color: white; border: none; border-radius: var(--radius-md);
+          font-weight: 500; font-size: 0.9375rem; transition: all var(--transition-fast);
         }
-
         .btn-save:hover:not(:disabled) {
           background: linear-gradient(135deg, var(--primary-700), var(--primary-800));
-          box-shadow: var(--shadow-md);
-          transform: translateY(-1px);
+          box-shadow: var(--shadow-md); transform: translateY(-1px);
         }
-
-        .btn-save:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .btn-save svg {
-          width: 18px;
-          height: 18px;
-        }
+        .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-save svg { width: 18px; height: 18px; }
 
         .spinner {
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
+          width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;
         }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 640px) {
-          .form-actions {
-            flex-direction: column-reverse;
-          }
-
-          .btn-cancel,
-          .btn-save {
-            width: 100%;
-            justify-content: center;
-          }
+          .form-actions { flex-direction: column-reverse; }
+          .btn-cancel, .btn-save { width: 100%; justify-content: center; }
+          .date-time-row { flex-direction: column; }
+          .priority-selector, .frequency-selector { flex-direction: column; }
         }
       `}</style>
     </div>

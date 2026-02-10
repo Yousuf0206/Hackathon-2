@@ -13,7 +13,6 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status, Background
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 from typing import Optional, List
-from datetime import datetime, date
 import logging
 
 from database import get_session, get_tasks_by_user, create_task, update_task, delete_task
@@ -40,8 +39,12 @@ class TaskResponse(BaseModel):
     title: str
     description: Optional[str]
     completed: bool
+    priority: str = "medium"
+    tags: Optional[str] = None
     due_date: Optional[str]
     due_time: Optional[str]
+    recurrence_rule_id: Optional[int] = None
+    recurrence: Optional[dict] = None
     created_at: str
     updated_at: str
 
@@ -86,17 +89,7 @@ def list_tasks(
     total_count = len(all_tasks)
 
     task_responses = [
-        TaskResponse(
-            id=task.id,
-            user_id=task.user_id,
-            title=task.title,
-            description=task.description,
-            completed=task.completed,
-            due_date=str(task.due_date) if task.due_date else None,
-            due_time=task.due_time,
-            created_at=task.created_at.isoformat() if task.created_at else "",
-            updated_at=task.updated_at.isoformat() if task.updated_at else "",
-        )
+        _task_to_response(task, session)
         for task in tasks
     ]
 
@@ -110,16 +103,31 @@ def list_tasks(
     )
 
 
-def _task_to_response(task) -> TaskResponse:
+def _task_to_response(task, session=None) -> TaskResponse:
     """Convert a Task model instance to TaskResponse."""
+    recurrence = None
+    if task.recurrence_rule_id and session:
+        from models.recurrence_rule import RecurrenceRule
+        rule = session.get(RecurrenceRule, task.recurrence_rule_id)
+        if rule:
+            recurrence = {
+                "frequency": rule.frequency,
+                "end_after_count": rule.end_after_count,
+                "end_by_date": rule.end_by_date.isoformat() if rule.end_by_date else None,
+                "is_active": rule.is_active,
+            }
     return TaskResponse(
         id=task.id,
         user_id=task.user_id,
         title=task.title,
         description=task.description,
         completed=task.completed,
+        priority=getattr(task, 'priority', 'medium') or 'medium',
+        tags=getattr(task, 'tags', None),
         due_date=str(task.due_date) if task.due_date else None,
         due_time=task.due_time,
+        recurrence_rule_id=task.recurrence_rule_id,
+        recurrence=recurrence,
         created_at=task.created_at.isoformat() if task.created_at else "",
         updated_at=task.updated_at.isoformat() if task.updated_at else "",
     )
@@ -131,6 +139,10 @@ class TaskCreate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=5000)
     due_date: Optional[str] = None
     due_time: Optional[str] = None
+    priority: Optional[str] = "medium"
+    tags: Optional[str] = None
+    recurrence: Optional[dict] = None
+    reminder_minutes: Optional[int] = None
 
 
 @router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
@@ -152,7 +164,26 @@ async def create_task_endpoint(
         description=request.description,
         due_date=request.due_date,
         due_time=request.due_time,
+        priority=request.priority,
+        tags=request.tags,
     )
+
+    # Create recurrence rule if provided
+    if request.recurrence:
+        from models.recurrence_rule import RecurrenceRule
+        rule = RecurrenceRule(
+            task_id=task.id,
+            frequency=request.recurrence.get("frequency", "daily"),
+            end_after_count=request.recurrence.get("end_after_count"),
+            end_by_date=request.recurrence.get("end_by_date"),
+        )
+        session.add(rule)
+        session.commit()
+        session.refresh(rule)
+        task.recurrence_rule_id = rule.id
+        session.add(task)
+        session.commit()
+        session.refresh(task)
 
     # T025: Publish TaskCreated.v1 event after successful DB insert
     background_tasks.add_task(
@@ -165,10 +196,12 @@ async def create_task_endpoint(
             title=task.title,
             description=task.description,
             due_date=str(task.due_date) if task.due_date else None,
+            priority=task.priority,
+            tags=task.tags,
         ),
     )
 
-    return _task_to_response(task)
+    return _task_to_response(task, session)
 
 
 class TaskCompletionUpdate(BaseModel):
@@ -208,13 +241,18 @@ async def toggle_task_completion(
             ),
         )
 
-    return _task_to_response(task)
+    return _task_to_response(task, session)
 
 
 class TaskUpdate(BaseModel):
     """Request payload for updating a task."""
     title: str = Field(min_length=1, max_length=500)
     description: Optional[str] = Field(default=None, max_length=5000)
+    priority: Optional[str] = None
+    tags: Optional[str] = None
+    due_date: Optional[str] = None
+    due_time: Optional[str] = None
+    recurrence: Optional[dict] = None
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
@@ -236,14 +274,48 @@ async def update_task_endpoint(
         user_id=user_id,
         title=title,
         description=request.description,
+        priority=request.priority if request.priority is not None else "UNSET",
+        tags=request.tags if request.tags is not None else "UNSET",
+        due_date=request.due_date if request.due_date is not None else "UNSET",
+        due_time=request.due_time if request.due_time is not None else "UNSET",
     )
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Handle recurrence update
+    if request.recurrence is not None:
+        from models.recurrence_rule import RecurrenceRule
+        if task.recurrence_rule_id:
+            rule = session.get(RecurrenceRule, task.recurrence_rule_id)
+            if rule:
+                rule.frequency = request.recurrence.get("frequency", rule.frequency)
+                rule.end_after_count = request.recurrence.get("end_after_count")
+                rule.end_by_date = request.recurrence.get("end_by_date")
+                session.add(rule)
+                session.commit()
+        else:
+            rule = RecurrenceRule(
+                task_id=task.id,
+                frequency=request.recurrence.get("frequency", "daily"),
+                end_after_count=request.recurrence.get("end_after_count"),
+                end_by_date=request.recurrence.get("end_by_date"),
+            )
+            session.add(rule)
+            session.commit()
+            session.refresh(rule)
+            task.recurrence_rule_id = rule.id
+            session.add(task)
+            session.commit()
+            session.refresh(task)
 
     # T026: Publish TaskUpdated.v1 event after successful DB update
     changes = {"title": title}
     if request.description is not None:
         changes["description"] = request.description
+    if request.priority is not None:
+        changes["priority"] = request.priority
+    if request.tags is not None:
+        changes["tags"] = request.tags
     background_tasks.add_task(
         publish_event,
         event_type=EVENT_TYPES["task_updated"],
@@ -255,7 +327,7 @@ async def update_task_endpoint(
         ),
     )
 
-    return _task_to_response(task)
+    return _task_to_response(task, session)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
