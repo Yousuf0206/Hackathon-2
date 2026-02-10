@@ -35,13 +35,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { title, description } = body;
+    const { title, description, priority, tags, due_date, due_time } = body;
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       return NextResponse.json({ detail: 'Title is required' }, { status: 400 });
     }
 
-    const task = await updateTask(taskId, userId, { title: title.trim(), description: description || null });
+    const updates: Record<string, any> = { title: title.trim(), description: description || null };
+    if (priority !== undefined) updates.priority = priority;
+    if (tags !== undefined) updates.tags = tags;
+    if (due_date !== undefined) updates.due_date = due_date;
+    if (due_time !== undefined) updates.due_time = due_time;
+
+    const task = await updateTask(taskId, userId, updates);
 
     if (!task) {
       return NextResponse.json({ detail: 'Task not found' }, { status: 404 });
@@ -49,7 +55,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       id: task.id, user_id: task.user_id, title: task.title, description: task.description,
-      completed: task.completed, due_date: task.due_date, due_time: task.due_time,
+      completed: task.completed, priority: task.priority || 'medium', tags: task.tags || null,
+      due_date: task.due_date, due_time: task.due_time,
       created_at: task.created_at, updated_at: task.updated_at,
     });
   } catch (error) {

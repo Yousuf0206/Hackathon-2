@@ -104,6 +104,10 @@ app.include_router(todos.router, prefix="/api/todos", tags=["todos"])
 from api import tasks
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 
+# Phase V: Mount recurrence rules router
+from api import recurrence_rules
+app.include_router(recurrence_rules.router, prefix="/api/recurrence-rules", tags=["recurrence-rules"])
+
 # Phase III: Mount chat router
 from api import chat
 app.include_router(chat.router, prefix="/api", tags=["chat"])

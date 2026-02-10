@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
         title: t.title,
         description: t.description,
         completed: t.completed,
+        priority: t.priority || 'medium',
+        tags: t.tags || null,
         due_date: t.due_date,
         due_time: t.due_time,
         created_at: t.created_at,
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, due_date, due_time } = body;
+    const { title, description, due_date, due_time, priority, tags } = body;
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       return NextResponse.json({ detail: 'Title is required' }, { status: 400 });
@@ -89,7 +91,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ detail: 'Title must be 500 characters or less' }, { status: 400 });
     }
 
-    const task = await createTask(userId, title.trim(), description || null, due_date || null, due_time || null);
+    const task = await createTask(
+      userId, title.trim(), description || null,
+      due_date || null, due_time || null,
+      priority || 'medium', tags || null
+    );
 
     return NextResponse.json({
       id: task.id,
@@ -97,6 +103,8 @@ export async function POST(request: NextRequest) {
       title: task.title,
       description: task.description,
       completed: task.completed,
+      priority: task.priority || 'medium',
+      tags: task.tags || null,
       due_date: task.due_date,
       due_time: task.due_time,
       created_at: task.created_at,

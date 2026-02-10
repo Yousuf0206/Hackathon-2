@@ -78,6 +78,10 @@ def _apply_migrations() -> None:
         _add_column_if_missing(conn, "users", "phone", "VARCHAR(20)")
         _add_column_if_missing(conn, "users", "biodata", "TEXT")
 
+        # Phase 5: Add priority and tags to tasks table
+        _add_column_if_missing(conn, "tasks", "priority", "VARCHAR(6) NOT NULL DEFAULT 'medium'")
+        _add_column_if_missing(conn, "tasks", "tags", "VARCHAR(1000)")
+
         # Backfill login_name from email for existing users
         conn.execute(text("UPDATE users SET login_name = email WHERE login_name IS NULL"))
 
@@ -175,8 +179,10 @@ def create_task(
     description: Optional[str] = None,
     due_date: Optional[str] = None,
     due_time: Optional[str] = None,
+    priority: Optional[str] = "medium",
+    tags: Optional[str] = None,
 ) -> Task:
-    """Create a new task for the given user with optional due date/time."""
+    """Create a new task for the given user with optional due date/time, priority, and tags."""
     from datetime import date as date_type
 
     # Validate and convert due_time
@@ -193,6 +199,8 @@ def create_task(
         description=description,
         due_date=parsed_date,
         due_time=validated_time,
+        priority=priority or "medium",
+        tags=tags,
     )
     session.add(task)
     session.commit()
@@ -224,11 +232,13 @@ def update_task(
     description: Optional[str] = None,
     due_date: Optional[str] = "UNSET",
     due_time: Optional[str] = "UNSET",
+    priority: Optional[str] = "UNSET",
+    tags: Optional[str] = "UNSET",
 ) -> Optional[Task]:
     """Update fields on a task owned by user_id. Returns None if not found.
 
-    due_date and due_time use sentinel "UNSET" to distinguish between
-    'not provided' (keep current) and None (clear the field).
+    due_date, due_time, priority, and tags use sentinel "UNSET" to distinguish
+    between 'not provided' (keep current) and None (clear the field).
     """
     from datetime import date as date_type
 
@@ -247,6 +257,10 @@ def update_task(
         task.due_date = date_type.fromisoformat(due_date) if due_date else None
     if due_time != "UNSET":
         task.due_time = Task.validate_due_time(due_time)
+    if priority != "UNSET":
+        task.priority = priority or "medium"
+    if tags != "UNSET":
+        task.tags = tags
     task.updated_at = datetime.utcnow()
     session.add(task)
     session.commit()

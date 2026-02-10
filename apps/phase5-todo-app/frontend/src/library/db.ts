@@ -144,6 +144,14 @@ export async function initDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id)
     `;
 
+    // Migrate tasks table: add priority and tags columns if missing
+    try {
+      await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority VARCHAR(6) NOT NULL DEFAULT 'medium'`;
+      await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tags VARCHAR(1000)`;
+    } catch {
+      // Columns may already exist
+    }
+
     console.log('Database tables initialized successfully');
   } catch (error) {
     console.error('Failed to initialize database:', error);
@@ -590,6 +598,8 @@ export interface Task {
   title: string;
   description: string | null;
   completed: boolean;
+  priority: string;
+  tags: string | null;
   due_date: string | null;
   due_time: string | null;
   created_at: string;
@@ -628,17 +638,17 @@ export async function findTasksByUserId(userId: string, status?: string | null):
   let result;
   if (status === 'pending') {
     result = await sql`
-      SELECT id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+      SELECT id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
       FROM tasks WHERE user_id = ${userId} AND completed = false ORDER BY updated_at DESC
     `;
   } else if (status === 'completed') {
     result = await sql`
-      SELECT id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+      SELECT id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
       FROM tasks WHERE user_id = ${userId} AND completed = true ORDER BY updated_at DESC
     `;
   } else {
     result = await sql`
-      SELECT id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+      SELECT id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
       FROM tasks WHERE user_id = ${userId} ORDER BY updated_at DESC
     `;
   }
@@ -649,6 +659,8 @@ export async function findTasksByUserId(userId: string, status?: string | null):
     title: row.title,
     description: row.description,
     completed: row.completed,
+    priority: row.priority || 'medium',
+    tags: row.tags || null,
     due_date: row.due_date ? String(row.due_date) : null,
     due_time: row.due_time || null,
     created_at: row.created_at?.toISOString?.() || row.created_at,
@@ -658,14 +670,16 @@ export async function findTasksByUserId(userId: string, status?: string | null):
 
 export async function createTask(
   userId: string, title: string, description: string | null,
-  dueDate: string | null = null, dueTime: string | null = null
+  dueDate: string | null = null, dueTime: string | null = null,
+  priority: string = 'medium', tags: string | null = null
 ): Promise<Task> {
   if (!sql) {
     const tasks = getInMemoryTasks();
     const now = new Date().toISOString();
     const task: Task = {
       id: nextTaskId(), user_id: userId, title, description,
-      completed: false, due_date: dueDate, due_time: dueTime,
+      completed: false, priority, tags,
+      due_date: dueDate, due_time: dueTime,
       created_at: now, updated_at: now,
     };
     tasks.push(task);
@@ -673,15 +687,16 @@ export async function createTask(
   }
 
   const result = await sql`
-    INSERT INTO tasks (user_id, title, description, due_date, due_time)
-    VALUES (${userId}, ${title}, ${description}, ${dueDate}::date, ${dueTime})
-    RETURNING id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+    INSERT INTO tasks (user_id, title, description, due_date, due_time, priority, tags)
+    VALUES (${userId}, ${title}, ${description}, ${dueDate}::date, ${dueTime}, ${priority}, ${tags})
+    RETURNING id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
   `;
 
   const row = result[0];
   return {
     id: row.id, user_id: row.user_id, title: row.title, description: row.description,
-    completed: row.completed, due_date: row.due_date ? String(row.due_date) : null,
+    completed: row.completed, priority: row.priority || 'medium', tags: row.tags || null,
+    due_date: row.due_date ? String(row.due_date) : null,
     due_time: row.due_time || null,
     created_at: row.created_at?.toISOString?.() || row.created_at,
     updated_at: row.updated_at?.toISOString?.() || row.updated_at,
@@ -695,7 +710,7 @@ export async function findTaskByIdAndUserId(id: number, userId: string): Promise
   }
 
   const result = await sql`
-    SELECT id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+    SELECT id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
     FROM tasks WHERE id = ${id} AND user_id = ${userId} LIMIT 1
   `;
 
@@ -703,7 +718,8 @@ export async function findTaskByIdAndUserId(id: number, userId: string): Promise
   const row = result[0];
   return {
     id: row.id, user_id: row.user_id, title: row.title, description: row.description,
-    completed: row.completed, due_date: row.due_date ? String(row.due_date) : null,
+    completed: row.completed, priority: row.priority || 'medium', tags: row.tags || null,
+    due_date: row.due_date ? String(row.due_date) : null,
     due_time: row.due_time || null,
     created_at: row.created_at?.toISOString?.() || row.created_at,
     updated_at: row.updated_at?.toISOString?.() || row.updated_at,
@@ -712,7 +728,7 @@ export async function findTaskByIdAndUserId(id: number, userId: string): Promise
 
 export async function updateTask(
   id: number, userId: string,
-  updates: Partial<Pick<Task, 'title' | 'description' | 'completed'>>
+  updates: Partial<Pick<Task, 'title' | 'description' | 'completed' | 'priority' | 'tags' | 'due_date' | 'due_time'>>
 ): Promise<Task | null> {
   if (!sql) {
     const tasks = getInMemoryTasks();
@@ -722,24 +738,38 @@ export async function updateTask(
     return tasks[index];
   }
 
+  // Build a general update that handles all fields
+  const title = updates.title;
+  const description = updates.description;
+  const completed = updates.completed;
+  const priority = updates.priority;
+  const tags = updates.tags;
+  const dueDate = updates.due_date;
+  const dueTime = updates.due_time;
+
   let result;
-  if (updates.title !== undefined && updates.description !== undefined) {
+  if (title !== undefined && description !== undefined) {
     result = await sql`
-      UPDATE tasks SET title = ${updates.title}, description = ${updates.description}, updated_at = NOW()
+      UPDATE tasks SET title = ${title}, description = ${description},
+        priority = COALESCE(${priority ?? null}, priority),
+        tags = COALESCE(${tags ?? null}, tags),
+        due_date = COALESCE(${dueDate ?? null}::date, due_date),
+        due_time = COALESCE(${dueTime ?? null}, due_time),
+        updated_at = NOW()
       WHERE id = ${id} AND user_id = ${userId}
-      RETURNING id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+      RETURNING id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
     `;
-  } else if (updates.completed !== undefined) {
+  } else if (completed !== undefined) {
     result = await sql`
-      UPDATE tasks SET completed = ${updates.completed}, updated_at = NOW()
+      UPDATE tasks SET completed = ${completed}, updated_at = NOW()
       WHERE id = ${id} AND user_id = ${userId}
-      RETURNING id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+      RETURNING id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
     `;
   } else {
     result = await sql`
       UPDATE tasks SET updated_at = NOW()
       WHERE id = ${id} AND user_id = ${userId}
-      RETURNING id, user_id, title, description, completed, due_date, due_time, created_at, updated_at
+      RETURNING id, user_id, title, description, completed, priority, tags, due_date, due_time, created_at, updated_at
     `;
   }
 
@@ -747,7 +777,8 @@ export async function updateTask(
   const row = result[0];
   return {
     id: row.id, user_id: row.user_id, title: row.title, description: row.description,
-    completed: row.completed, due_date: row.due_date ? String(row.due_date) : null,
+    completed: row.completed, priority: row.priority || 'medium', tags: row.tags || null,
+    due_date: row.due_date ? String(row.due_date) : null,
     due_time: row.due_time || null,
     created_at: row.created_at?.toISOString?.() || row.created_at,
     updated_at: row.updated_at?.toISOString?.() || row.updated_at,
