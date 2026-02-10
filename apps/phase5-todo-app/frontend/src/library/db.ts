@@ -39,7 +39,21 @@ export interface Todo {
 }
 
 // Check if we have a database URL configured
-const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+function sanitizeDatabaseUrl(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  let url = raw.trim();
+  // Strip `psql` command prefix if someone pasted a psql shell command
+  if (url.startsWith('psql ')) {
+    url = url.slice(5).trim();
+  }
+  // Strip surrounding single or double quotes
+  if ((url.startsWith("'") && url.endsWith("'")) || (url.startsWith('"') && url.endsWith('"'))) {
+    url = url.slice(1, -1).trim();
+  }
+  return url.startsWith('postgresql://') || url.startsWith('postgres://') ? url : undefined;
+}
+
+const DATABASE_URL = sanitizeDatabaseUrl(process.env.DATABASE_URL) || sanitizeDatabaseUrl(process.env.POSTGRES_URL);
 
 // Create SQL client if database URL is available
 const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
